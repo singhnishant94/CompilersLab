@@ -30,10 +30,12 @@ VarRecord::VarRecord(GlType* _keyType, string _name){
 void VarRecord::print(){
     cout<<name<<" ";
     if (keyType->type == BASIC){
+	cout<<"\t";
 	((BasicType*)keyType)->print();
 	cout<<"Offset: "<<offset;
     }
     else{
+	cout<<"\t";
 	((ArrayType*)keyType)->print();
 	cout<<" Offset: "<<offset;
     }
@@ -113,10 +115,14 @@ void SymTab::print(){
     GlRecord* temp;
     for (itr = entries.begin(); itr != entries.end() ;++itr){
 	temp = itr->second;
+	
 	if (temp->type == VAR){
+	    cout<<"\t";
 	    ((VarRecord*)temp)->print();
 	}
 	else{
+	    cout<<"Local symbol-table for function: "<<itr->first<<endl;
+	    cout<<"\t";
 	    ((FuncRecord*)temp)->print();
 	}
 	cout<<endl;
