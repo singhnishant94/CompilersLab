@@ -64,8 +64,7 @@ fun_declarator
 	    BasicType* retType = new BasicType(currentType);
 	    func = new FuncRecord(retType, $1);
 	    if (currentTab->find(RecordType::FUNC, $1)){
-		cout<<"Function already defined, Line : "<<lineNo<<endl;
-		exit(0);
+	      cout<<"Function already defined, Line : "<<lineNo<<endl; exit(0);
 	    }
 	    func->offset = GlOffset;
 	    currentTab->add(func);
@@ -85,8 +84,7 @@ fun_declarator
 	    BasicType* retType = new BasicType(currentType);
 	    func = new FuncRecord(retType, $1);
 	    if (currentTab->find(RecordType::FUNC, $1)){
-		cout<<"Function already defined, Line "<<lineNo<<endl;
-		exit(0);
+		cout<<"Function already defined, Line "<<lineNo<<endl; exit(0);
 	    }		
 	    func->offset = GlOffset;
 	    currentTab->add(func);
@@ -127,7 +125,7 @@ parameter_declaration
 		}
 	    }
 	    else{
-		cout<<"Variable "<<curName<<" already declared. line : "<<lineNo<<endl; exit(0);
+	      cout<<"Variable "<<curName<<" already declared. line : "<<lineNo<<endl; exit(0);
 	    }
 	}
         ;
@@ -266,7 +264,6 @@ assignment_statement
 	      else {
 		  $$->setType(new Type(Type::Error));
 		  cout<<"Incompatible types at line number: "<<lineNo<<endl; exit(0);
-		  exit(0);
 	      }
 	  }
 	}
@@ -418,8 +415,8 @@ postfix_expression
 	    ((Funcall*)$$)->setName(id);
 	  
 	    if (!globalTab->find(RecordType::FUNC, $1)){
-		cout<<"Function "<<$1<<" not found."<<endl;
-		$$->setType(new Type(Type::Error));
+	      cout<<"Function "<<$1<<" not found. Line No : "<<lineNo<<endl; exit(0);
+	      $$->setType(new Type(Type::Error));
 	    }
 	    else {
 		func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
@@ -688,8 +685,9 @@ declarator_list
 		curOffset -= width;
 		currentTab->add(var);
 	    }
-	    else
+	    else{
 		cout<<"Variable "<<curName<<" already declared. Line: "<<lineNo<<endl; exit(0);
+	    }
 	    
 	}
 	| declarator_list ',' declarator 
@@ -708,8 +706,9 @@ declarator_list
 		curOffset -= width;
 		currentTab->add(var);
 	    }
-	    else
+	    else{
 		cout<<"Variable "<<curName<<" already declared.Line no "<<lineNo<<endl; exit(0);
+	    }
 	}
 	;
 
