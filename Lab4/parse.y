@@ -232,7 +232,7 @@ expression
 	{
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::OR_OP);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	;
 
@@ -245,7 +245,7 @@ logical_and_expression
 	{
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::AND_OP);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	;
 
@@ -258,13 +258,13 @@ equality_expression
 	{
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::EQ_OP);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	| equality_expression NE_OP relational_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::NE_OP);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	;
 relational_expression
@@ -276,25 +276,25 @@ relational_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::LT);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
         | relational_expression '>' additive_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::GT);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	} 
 	| relational_expression LE_OP additive_expression 
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::LE_OP);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
         | relational_expression GE_OP additive_expression 
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::GE_OP);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	;
 
@@ -307,13 +307,13 @@ additive_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::PLUS);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	| additive_expression '-' multiplicative_expression 
 	{
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::MINUS);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	;
 
@@ -325,12 +325,12 @@ multiplicative_expression
 	| multiplicative_expression '*' unary_expression 
 	{ Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::MULT);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
 	| multiplicative_expression '/' unary_expression 
 	{ Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::DIV);
-	  $$->setType(formType(t, $3->getType()));
+	  $$->setType(formType(t, $3->getType(), lineNo));
 	}
         ;
 unary_expression
@@ -433,8 +433,10 @@ primary_expression
 	  if (compatible(t1, t2)){
 	      $$->setType(new Type(Type::Base, Type::Int));
 	  }
-	  else
+	  else{
 	      $$->setType(new Type(Type::Error));
+	      cout<<"Incompatible Types at lineNo :"<<lineNo<<endl;
+	  }
 
 	}
 	| INT_CONSTANT

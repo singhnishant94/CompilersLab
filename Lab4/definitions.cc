@@ -79,12 +79,12 @@ bool compatible(Type *t1, Type *t2) {
     return equal(t1, t2);
 }
 
-Type* formType(Type* t1, Type *t2){
+Type* formType(Type* t1, Type *t2, int lineNo){
   if (t1->tag == Type::Error || t2->tag == Type::Error){
     return new Type(Type::Error);
   }
   else if (!compatible(t1, t2)){
-    cout<<"Incompatible Types"<<endl;
+    cout<<"Incompatible Types at lineNo : "<<lineNo<<endl;
     return new Type(Type::Error);
   }
   else if (equal(t1, t2)){
