@@ -65,6 +65,7 @@ fun_declarator
 	    func = new FuncRecord(retType, $1);
 	    if (currentTab->find(RecordType::FUNC, $1)){
 		cout<<"Function already defined, Line : "<<lineNo<<endl;
+		exit(0);
 	    }
 	    func->offset = GlOffset;
 	    currentTab->add(func);
@@ -85,6 +86,7 @@ fun_declarator
 	    func = new FuncRecord(retType, $1);
 	    if (currentTab->find(RecordType::FUNC, $1)){
 		cout<<"Function already defined, Line "<<lineNo<<endl;
+		exit(0);
 	    }		
 	    func->offset = GlOffset;
 	    currentTab->add(func);
@@ -125,7 +127,7 @@ parameter_declaration
 		}
 	    }
 	    else{
-		cout<<"Variable "<<curName<<" already declared. line : "<<lineNo<<endl;
+		cout<<"Variable "<<curName<<" already declared. line : "<<lineNo<<endl; exit(0);
 	    }
 	}
         ;
@@ -263,7 +265,8 @@ assignment_statement
 	      }
 	      else {
 		  $$->setType(new Type(Type::Error));
-		  cout<<"Incompatible types at line number: "<<lineNo<<endl;
+		  cout<<"Incompatible types at line number: "<<lineNo<<endl; exit(0);
+		  exit(0);
 	      }
 	  }
 	}
@@ -427,7 +430,7 @@ postfix_expression
 	{
 	    func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
 	    if (!func){
-	      cout<<"Function "<<$1<<" not found. line : "<<lineNo<<endl;
+	      cout<<"Function "<<$1<<" not found. line : "<<lineNo<<endl; exit(0);
 	      curParam = 0;
 	    }
 	    else curParam = func->paramList;
@@ -442,7 +445,7 @@ postfix_expression
 	    Type *t = $$->getType();
 	    if (t == 0){
 	      if (curParam != 0){
-		cout<<"Less Number of parameters provided!! LineNo : "<<lineNo<<endl;
+		cout<<"Less Number of parameters provided!! LineNo : "<<lineNo<<endl; exit(0);
 		$$->setType(new Type(Type::Error));
 	      }
 	      else {
@@ -481,7 +484,7 @@ primary_expression
 	  }
 	  else{
 	      $$->setType(new Type(Type::Error));
-	      cout<<"Incompatible Types at lineNo :"<<lineNo<<endl;
+	      cout<<"Incompatible Types at lineNo :"<<lineNo<<endl; exit(0);
 	  }
 
 	}
@@ -514,7 +517,7 @@ l_expression
 	    temp = (VarRecord*)currentTab->find(RecordType::VAR, $1);
 	    
 	    if (!temp){
-		cout<<"Variable "<<$1<<" hasn't been declared. line : "<<lineNo<<endl;
+		cout<<"Variable "<<$1<<" hasn't been declared. line : "<<lineNo<<endl; exit(0);
 		$$->setType(new Type(Type::Error));
 	    }
 	    else{
@@ -531,11 +534,11 @@ l_expression
 	  $$ = new Index((ArrayRef*)$1, $3);
 
 	    if (t3->basetype != Type::Int){
-		cout<<"Index Of array not integer !!, Lineno : "<<lineNo<<endl;
+		cout<<"Index Of array not integer !!, Lineno : "<<lineNo<<endl; exit(0);
 		$$->setType(new Type(Type::Error));
 	    }
 	    else if (t1->tag != Type::Pointer){
-	        cout<<"Cannot Dereference non pointer type, lineNo : "<<lineNo<<endl;
+	        cout<<"Cannot Dereference non pointer type, lineNo : "<<lineNo<<endl; exit(0);
 		$$->setType(new Type(Type::Error));
 	    }
 	    else {
@@ -543,7 +546,7 @@ l_expression
 	    }
 	  
 	    if (curGlType->type != VarType::BASIC){
-		//cout<<"Incompatible Types. line :"<<lineNo<<endl;
+		//cout<<"Incompatible Types. line :"<<lineNo<<endl; exit(0);
 		curGlType = ((ArrayType*)curGlType)->typeName;
 	    }
 	}
@@ -563,7 +566,7 @@ expression_list
 	    }
 	    else {
 		if (curParam == 0){
-		    cout<<"Function accepts no parameters!! lineNo : "<<lineNo<<endl;
+		    cout<<"Function accepts no parameters!! lineNo : "<<lineNo<<endl; exit(0);
 		    $$->setType(new Type(Type::Error));
 		}
 		else {
@@ -572,7 +575,7 @@ expression_list
 			curParam = curParam->next;
 		    }
 		    else {
-			cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl;
+			cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
 			$$->setType(new Type(Type::Error));
 		    }
 		}
@@ -586,7 +589,7 @@ expression_list
 	    Type* t = $$->getType();
 	    if (t == 0){
 		if (curParam == 0){
-		    cout<<"More than required parameters provided!! lineNo : "<<lineNo<<endl;
+		    cout<<"More than required parameters provided!! lineNo : "<<lineNo<<endl; exit(0);
 		    $$->setType(new Type(Type::Error));
 		}
 		else {
@@ -595,7 +598,7 @@ expression_list
 			curParam = curParam->next;
 		    }
 		    else {
-			cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl;
+			cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
 			$$->setType(new Type(Type::Error));
 		    }
 		} 
@@ -686,7 +689,7 @@ declarator_list
 		currentTab->add(var);
 	    }
 	    else
-		cout<<"Variable "<<curName<<" already declared. Line: "<<lineNo<<endl;
+		cout<<"Variable "<<curName<<" already declared. Line: "<<lineNo<<endl; exit(0);
 	    
 	}
 	| declarator_list ',' declarator 
@@ -706,7 +709,7 @@ declarator_list
 		currentTab->add(var);
 	    }
 	    else
-		cout<<"Variable "<<curName<<" already declared.Line no "<<lineNo<<endl;
+		cout<<"Variable "<<curName<<" already declared.Line no "<<lineNo<<endl; exit(0);
 	}
 	;
 
