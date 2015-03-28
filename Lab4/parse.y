@@ -18,9 +18,12 @@
 translation_unit
 	: function_definition 
 	{
-	    $$ = $1;// $$->print();
+	    $$ = $1; $$->print();
 	}
 	| translation_unit function_definition 
+	{
+	  $2->print();
+	}
         ;
 
 function_definition
@@ -164,6 +167,7 @@ compound_statement
 	: '{' '}'
 	{
 	  $$ = new BlockAst();
+	  $$->setType(new Type(Type::Ok));
 	} 
 	| '{' statement_list '}' 
 	{
@@ -180,11 +184,30 @@ statement_list
 	{
 	  StmtAst* temp = $1;
 	  $$ = new BlockAst();
+	  Type *t = temp->getType();
+	  
+	  if (t->tag == Type::Error){
+	    $$->setType(new Type(Type::Error));
+	  }
+	  else {
+	    $$->setType(new Type(Type::Ok));
+	  }
+	  
 	  ((BlockAst*)$$)->add(temp);
 	}		
         | statement_list statement
 	{
 	  $$ = $1;
+	  Type *t2 = $2->getType();
+	  Type *t1 = $1->getType();
+	  
+	  if (t1->tag != Type::Error){
+	    if (t2->tag == Type::Error){
+	      delete t1;
+	      $$->setType(new Type(Type::Error));
+	    }
+	  }
+	  
 	  ((BlockAst*)$$)->add($2);
 	}	
 	;
@@ -209,6 +232,13 @@ statement
         | RETURN expression ';'	
 	{
 	  $$ = new Return($2);
+	  Type *t = $2->getType();
+	  if (t->tag == Type::Error){
+	    $$->setType(new Type(Type::Error));
+	  }
+	  else {
+	    $$->setType(new Type(Type::Ok));
+	  }
 	}
         ;
 
@@ -216,10 +246,20 @@ assignment_statement
         : ';'
 	{
 	  $$ = new Ass(0, 0);
+	  $$->setType(new Type(Type::Ok));
 	}
         |  l_expression '=' expression ';'	
 	{
+	  Type *t1 = $1->getType();
+	  Type *t3 = $3->getType();
 	  $$ = new Ass($1, $3);
+	  
+	  if (t1->tag == Type::Error || t3->tag == Type::Error){
+	    $$->setType(new Type(Type::Error));
+	  }
+	  else {
+	    $$->setType(new Type(Type::Ok));
+	  }
 	}
 	;
 
@@ -571,18 +611,45 @@ unary_operator
 selection_statement
         : IF '(' expression ')' statement ELSE statement 
 	{
+	  Type *t3 = $3->getType();
+	  Type *t5 = $5->getType();
+	  Type *t7 = $7->getType();
 	  $$ = new If($3, $5, $7);
+	  if (t3->tag == Type::Error || t5->tag == Type::Error || t7->tag == Type::Error){
+	    $$->setType(new Type(Type::Error));
+	  }
+	  else{
+	    $$->setType(new Type(Type::Ok));
+	  }
 	}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement 	
 	{
+	  Type *t3 = $3->getType();
+	  Type *t5 = $5->getType();
 	  $$ = new While($3, $5);
+	  if (t3->tag == Type::Error || t5->tag == Type::Error){
+	    $$->setType(new Type(Type::Error));
+	  }
+	  else{
+	    $$->setType(new Type(Type::Ok));
+	  }
 	}
         | FOR '(' expression ';' expression ';' expression ')' statement  //modified this production
 	{
+	  Type *t3 = $3->getType();
+	  Type *t5 = $5->getType();
+	  Type *t7 = $7->getType();
+	  Type *t9 = $9->getType();
 	  $$ = new For($3, $5, $7, $9);
+	  if (t3->tag == Type::Error || t5->tag == Type::Error || t7->tag == Type::Error || t9->tag == Type::Error){
+	    $$->setType(new Type(Type::Error));
+	  }
+	  else{
+	    $$->setType(new Type(Type::Ok));
+	  }
 	}
         ;
 
