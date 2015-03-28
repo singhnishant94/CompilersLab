@@ -1,0 +1,19 @@
+StmtAst
+BlockAst vector<StmtAst>
+Ass ExpAst ExpAst
+While ExpAst StmtAst
+For ExpAst ExpAst ExpAst StmtAst
+0
+ExpAst
+Op ExpAst ExpAst
+Unop ExpAst
+Funcall listofExpAst
+FloatConst float 
+IntConst int
+StringConst string 
+Identifier string
+ArrayRef e
+0
+ArrayRef
+Index ArrayRef ExpAst
+0
