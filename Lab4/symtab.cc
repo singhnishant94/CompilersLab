@@ -39,7 +39,11 @@ void VarRecord::print(){
 	((ArrayType*)keyType)->print();
 	cout<<" Offset: "<<offset;
     }
-}	
+}
+	
+void FuncRecord::print(){
+    localSymTab->print();
+}
 
 BasicType::BasicType(BasicVarType bvt){
     typeName = bvt;
@@ -122,7 +126,7 @@ void SymTab::print(){
 	}
 	else{
 	    cout<<"Local symbol-table for function: "<<itr->first<<endl;
-	    cout<<"\t";
+	    
 	    ((FuncRecord*)temp)->print();
 	}
 	cout<<endl;

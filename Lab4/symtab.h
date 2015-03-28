@@ -34,7 +34,7 @@ class GlRecord {
     int offset;
 };
 
-class SymTab;
+
 class VarRecord;
 
 class Param {
@@ -46,6 +46,18 @@ class Param {
     Param* add(VarRecord*);
 };
 
+class SymTab {
+ public:
+    map<string, GlRecord*> entries;
+    GlRecord* find(RecordType, string); 
+
+    SymTab();
+    void add(GlRecord*);
+    void print();
+};
+
+
+
 class FuncRecord : public GlRecord {
  public:
     GlType* returnType;
@@ -53,7 +65,7 @@ class FuncRecord : public GlRecord {
     Param* paramList;
     FuncRecord(GlType*, string);
     bool match(string);
-    void print(){}
+    void print();
 };
 
 class VarRecord : public GlRecord {
@@ -83,16 +95,6 @@ class ArrayType : public GlType {
     ArrayType(GlType*);
     void print();
     int calcSize();
-};
-
-class SymTab {
- public:
-    map<string, GlRecord*> entries;
-    GlRecord* find(RecordType, string); 
-
-    SymTab();
-    void add(GlRecord*);
-    void print();
 };
 
 

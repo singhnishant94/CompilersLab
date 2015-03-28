@@ -15,14 +15,23 @@
 %type <Int> type_specifier
 %%
 
+pre_translation_unit
+        : translation_unit
+	{
+	    globalTab->print();
+	}
+        ;
+
 translation_unit
 	: function_definition 
 	{
 	    $$ = $1; $$->print();
+	    cout<<endl;
 	}
 	| translation_unit function_definition 
 	{
 	  $2->print();
+	  cout<<endl;
 	}
         ;
 
@@ -34,7 +43,6 @@ function_definition
 	compound_statement 
 	{
 	  $$ = $4;
-	  currentTab->print();
 	  currentTab = globalTab;
 	}
 	;
