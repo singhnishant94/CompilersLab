@@ -258,7 +258,13 @@ assignment_statement
 	    $$->setType(new Type(Type::Error));
 	  }
 	  else {
-	    $$->setType(new Type(Type::Ok));
+	      if (compatible(t1, t2)){
+		  $$->setType(new Type(Type::Ok));
+	      }
+	      else {
+		  $$->setType(new Type(Type::Error));
+		  cout<<"Incompatible types at line number: "<<lineNo<<endl;
+	      }
 	  }
 	}
 	;
