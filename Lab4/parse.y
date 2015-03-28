@@ -102,6 +102,10 @@ parameter_list
 parameter_declaration
 	: type_specifier declarator 
 	{
+	  if (currentType == BasicVarType::VOID){
+	    cout<<"Variable declared void at line : "<<lineNo<<endl; exit(0);
+	  }
+	  
 	    GlType* temp = new BasicType(currentType);
 	    if (head != 0){
 		current->typeName = temp;
@@ -420,7 +424,10 @@ postfix_expression
 	    }
 	    else {
 		func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
-		$$->setType(getVarType(func->returnType));
+		if (func->paramList != 0){
+		  cout<<"Too Few Arguments to function at line no : "<<lineNo<<endl; exit(0);
+		}
+		else $$->setType(getVarType(func->returnType));
 	    }
 	}
 	| IDENTIFIER '(' 
@@ -665,7 +672,13 @@ declaration_list
 	;
 
 declaration
-	: type_specifier declarator_list';'
+	: type_specifier 
+	{
+	  if (currentType == BasicVarType::VOID){
+	    cout<<"Variable declared void at line : "<<lineNo<<endl; exit(0);
+	  }
+	}
+	declarator_list';'
 	;
 
 declarator_list
