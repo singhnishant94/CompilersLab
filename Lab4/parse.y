@@ -258,7 +258,7 @@ assignment_statement
 	    $$->setType(new Type(Type::Error));
 	  }
 	  else {
-	      if (compatible(t1, t2)){
+	      if (compatible(t1, t3)){
 		  $$->setType(new Type(Type::Ok));
 	      }
 	      else {
