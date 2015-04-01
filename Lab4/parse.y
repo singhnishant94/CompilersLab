@@ -252,6 +252,14 @@ statement
 	    $$->setType(new Type(Type::Ok));
 	  }
 	}
+        | IDENTIFIER '(' ')' ';'
+	{
+	  
+	}
+	| IDENTIFIER '(' expression_list ')' ';'
+	{
+	  
+	}
         ;
 
 assignment_statement
@@ -427,8 +435,14 @@ postfix_expression
 	    ((Funcall*)$$)->setName(id);
 	  
 	    if (!globalTab->find(RecordType::FUNC, $1)){
-	      cout<<"Function "<<$1<<" not found. Line No : "<<lineNo<<endl; exit(0);
-	      $$->setType(new Type(Type::Error));
+	      if ($1 == "printf"){ // case for library function
+		// setting the return type to Int for printf
+		$$->setType(new Type(Type::Base, Type::Int));
+	      }
+	      else {
+		cout<<"Function "<<$1<<" not found. Line No : "<<lineNo<<endl; exit(0);
+		$$->setType(new Type(Type::Error));
+	      }
 	    }
 	    else {
 		func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
@@ -442,27 +456,45 @@ postfix_expression
 	{
 	    func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
 	    if (!func){
-	      cout<<"Function "<<$1<<" not found. line : "<<lineNo<<endl; exit(0);
+	      if ($1 == "printf"){
+		libFunc = 1;
+	      }
+	      else {
+		cout<<"Function "<<$1<<" not found. line : "<<lineNo<<endl; exit(0);
+		libFunc = 0;
+	      }
 	      curParam = 0;
 	    }
-	    else curParam = func->paramList;
+	    else{
+	      curParam = func->paramList;
+	      libFunc = 0;
+	    }
 	}
 	expression_list ')' 
 	{
-	  
+
 	    $$ = $4;
 	    Identifier* id = new Identifier($1);
 	    ((Funcall*)$$)->setName(id);
-	    
-	    Type *t = $$->getType();
+
+	    Type *t = $$->getType(); 	    
 	    if (t == 0){
-	      if (curParam != 0){
-		cout<<"Less Number of parameters provided!! LineNo : "<<lineNo<<endl; exit(0);
-		$$->setType(new Type(Type::Error));
+	      if (libFunc){ // case for library function
+		$$->setType(new Type(Type::Base, Type::Int));
+		libFunc = 0;
 	      }
 	      else {
-		$$->setType(getVarType(func->returnType));
+		if (curParam != 0){
+		  cout<<"Less Number of parameters provided!! LineNo : "<<lineNo<<endl; exit(0);
+		  $$->setType(new Type(Type::Error));
+		}
+		else {
+		  $$->setType(getVarType(func->returnType));
+		}
 	      }
+	    }
+	    else {
+	      libFunc = 0; // reset the value
 	    }
 	}
 	| l_expression INC_OP
@@ -573,24 +605,33 @@ expression_list
 	    $$ = new Funcall();
 	    ((Funcall*)$$)->addExp(temp);
 	    $$->setType(0);
-	    if (func == 0){
-		$$->setType(new Type(Type::Error));
+	    
+	    if (libFunc){ // this part is for bypassing the library functions as printf
+	      Type* t = temp->getType();
+	      if (t->tag == Type::Error){ // handling the error in expression
+		$$->setType(t);
+	      }
 	    }
 	    else {
+	      if (func == 0){
+		$$->setType(new Type(Type::Error));
+	      }
+	      else {
 		if (curParam == 0){
-		    cout<<"Function accepts no parameters!! lineNo : "<<lineNo<<endl; exit(0);
-		    $$->setType(new Type(Type::Error));
+		  cout<<"Function accepts no parameters!! lineNo : "<<lineNo<<endl; exit(0);
+		  $$->setType(new Type(Type::Error));
 		}
 		else {
-		    Type* t = getVarType((curParam->rec)->keyType);
-		    if (equal(t, temp->getType())){
-			curParam = curParam->next;
-		    }
-		    else {
-			cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
-			$$->setType(new Type(Type::Error));
-		    }
+		  Type* t = getVarType((curParam->rec)->keyType);
+		  if (equal(t, temp->getType())){
+		    curParam = curParam->next;
+		  }
+		  else {
+		    cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
+		    $$->setType(new Type(Type::Error));
+		  }
 		}
+	      }
 	    }
 	}
         | expression_list ',' expression
@@ -599,21 +640,30 @@ expression_list
 	    $$ = $1;
 	    ((Funcall*)$$)->addExp($3);
 	    Type* t = $$->getType();
+	    
 	    if (t == 0){
+	      if (libFunc){ // handling the library func
+		Type *t3 = $3->getType();
+		if (t3->tag == Type::Error){   // chcking for error in expression $3
+		  $$->setType(t3);
+		}
+	      }
+	      else {     // user defined function
 		if (curParam == 0){
-		    cout<<"More than required parameters provided!! lineNo : "<<lineNo<<endl; exit(0);
-		    $$->setType(new Type(Type::Error));
+		  cout<<"More than required parameters provided!! lineNo : "<<lineNo<<endl; exit(0);
+		  $$->setType(new Type(Type::Error));
 		}
 		else {
-		    t = getVarType((curParam->rec)->keyType);
-		    if (equal(t, $3->getType())){
-			curParam = curParam->next;
-		    }
-		    else {
-			cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
-			$$->setType(new Type(Type::Error));
-		    }
-		} 
+		  t = getVarType((curParam->rec)->keyType);
+		  if (equal(t, $3->getType())){
+		    curParam = curParam->next;
+		  }
+		  else {
+		    cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
+		    $$->setType(new Type(Type::Error));
+		  }
+		}
+	      } 
 	    }
 	}
         ;

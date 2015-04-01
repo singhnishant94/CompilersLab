@@ -84,7 +84,7 @@ Type* formType(Type* t1, Type *t2, int lineNo){
     return new Type(Type::Error);
   }
   else if (!compatible(t1, t2)){
-    cout<<"Incompatible Types at lineNo : "<<lineNo<<endl;
+    cout<<"Incompatible Types at lineNo : "<<lineNo<<endl; exit(0);
     return new Type(Type::Error);
   }
   else if (equal(t1, t2)){

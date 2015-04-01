@@ -1,10 +1,15 @@
+int func(int b){
+     return b;
+}
+
 int main(int i, int j){
     float d, e;
     int a[4][5][6];
-    int l;
+    int l;	
+    l = printf(d + a, "aditya");
 a[3][5][6] = d;
      for(d = e ; i++ ; i++){
 	;
       }
-      
+      l = func(l);
 }

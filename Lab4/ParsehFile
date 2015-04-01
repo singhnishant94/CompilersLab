@@ -11,6 +11,7 @@ GlType* curGlType;
 int GlOffset;
 int curOffset;
 int width;
+int libFunc;
 
 Parser(){
 	globalTab = new SymTab();
@@ -23,6 +24,7 @@ Parser(){
 	GlOffset = 0;
 	curOffset = 0;
 	width = 0;
+	libFunc = 0;
 }
 
 ~Parser()
