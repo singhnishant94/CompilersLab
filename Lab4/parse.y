@@ -524,7 +524,7 @@ primary_expression
 	  Type* t2 = $3->getType();
 	  $$ = new Op($1, $3, OpType::ASSIGN);
 	  if (compatible(t1, t2)){
-	      $$->setType(new Type(Type::Base, Type::Int));
+	      $$->setType(t1);
 	  }
 	  else{
 	      $$->setType(new Type(Type::Error));
