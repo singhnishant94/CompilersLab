@@ -162,41 +162,65 @@ void BlockAst :: add(StmtAst* stmtAst){
 Ass :: Ass(ExpAst* node1, ExpAst* node2) {
   this->node1 = node1;
   this->node2 = node2;
-}
-
-void Ass :: print(){
-    
+  
   if (node1 != 0 && node2 != 0){
     Type* t1 = node1->getType();
     Type* t2 = node2->getType();
     if (t1->basetype == Type::Int && t2->basetype == Type::Float){
-      cout<<"(Ass ";
-      node1->print();
-      cout<<" ";
-      cout<<"(TO_INT ";
-      node2->print();
-      cout<<" )";
+      this->node2 = new ToInt(node2);
     }
     else if (t1->basetype == Type::Float && t2->basetype == Type::Int){
-      cout<<"(Ass ";
-      node1->print();
-      cout<<" ";
-      cout<<"(TO_FLOAT ";
-      node2->print();
-      cout<<" )";
-    }
-    else{
-      cout<<"(Ass ";
-      node1->print();
-      cout<<" ";
-      node2->print();
-      cout<<")";
+      this->node2 = new ToFloat(node2);
     }
   }
-  else{
+}
+
+void Ass :: print(){
+  if (node1 != 0 && node2 != 0){
+    cout<<"(Ass ";
+    node1->print();
+    cout<<" ";
+    node2->print();
+    cout<<")";
+  }
+  else {
     cout<<"(Empty)";
   }
 }
+
+// void Ass :: print(){
+    
+//   if (node1 != 0 && node2 != 0){
+//     Type* t1 = node1->getType();
+//     Type* t2 = node2->getType();
+//     if (t1->basetype == Type::Int && t2->basetype == Type::Float){
+//       cout<<"(Ass ";
+//       node1->print();
+//       cout<<" ";
+//       cout<<"(TO_INT ";
+//       node2->print();
+//       cout<<" )";
+//     }
+//     else if (t1->basetype == Type::Float && t2->basetype == Type::Int){
+//       cout<<"(Ass ";
+//       node1->print();
+//       cout<<" ";
+//       cout<<"(TO_FLOAT ";
+//       node2->print();
+//       cout<<" )";
+//     }
+//     else{
+//       cout<<"(Ass ";
+//       node1->print();
+//       cout<<" ";
+//       node2->print();
+//       cout<<")";
+//     }
+//   }
+//   else{
+//     cout<<"(Empty)";
+//   }
+// }
 
 While :: While(ExpAst* node1, StmtAst* node2) {
   this->node1 = node1;
