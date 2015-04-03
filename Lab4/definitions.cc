@@ -436,3 +436,11 @@ void Index :: printFold(){
   node2->print();
 }
 
+
+FuncallStmt::FuncallStmt(Funcall* node1){
+  this->node1 = node1;
+}
+
+void FuncallStmt::print(){
+  node1->print();
+}

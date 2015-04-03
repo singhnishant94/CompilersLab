@@ -254,11 +254,76 @@ statement
 	}
         | IDENTIFIER '(' ')' ';'
 	{
+	  Funcall *temp;
+	  temp = new Funcall();
+	  Identifier* id = new Identifier($1);
+	  temp->setName(id);
 	  
+	  if (!globalTab->find(RecordType::FUNC, $1)){
+	    if ($1 == "printf"){ // case for library function
+	      // setting the return type to Int for printf
+	      temp->setType(new Type(Type::Base, Type::Int));
+	    }
+	    else {
+	      cout<<"Function "<<$1<<" not found. Line No : "<<lineNo<<endl; exit(0);
+	      temp->setType(new Type(Type::Error));
+	    }
+	  }
+	  else {
+	    func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
+	    if (func->paramList != 0){
+	      cout<<"Too Few Arguments to function at line no : "<<lineNo<<endl; exit(0);
+	    }
+	    else temp->setType(getVarType(func->returnType));
+	  }
+
+	  $$ = new FuncallStmt(temp);
 	}
-	| IDENTIFIER '(' expression_list ')' ';'
+        | IDENTIFIER '(' 
 	{
+	  func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
+	  if (!func){
+	    if ($1 == "printf"){
+	      libFunc = 1;
+	    }
+	    else {
+	      cout<<"Function "<<$1<<" not found. line : "<<lineNo<<endl; exit(0);
+	      libFunc = 0;
+	    }
+	    curParam = 0;
+	  }
+	  else{
+	    curParam = func->paramList;
+	    libFunc = 0;
+	  }
+	}
+        expression_list ')' ';'
+	{
+	  Funcall* temp = (Funcall*)$4;
+	  Identifier* id = new Identifier($1);
+	  temp->setName(id);
+
+	  Type *t = temp->getType(); 	    
+	  if (t == 0){
+	    if (libFunc){ // case for library function
+	      temp->setType(new Type(Type::Base, Type::Int));
+	      libFunc = 0;
+	    }
+	    else {
+	      if (curParam != 0){
+		cout<<"Less Number of parameters provided!! LineNo : "<<lineNo<<endl; exit(0);
+		temp->setType(new Type(Type::Error));
+	      }
+	      else {
+		temp->setType(getVarType(func->returnType));
+	      }
+	    }
+	  }
+	  else {
+	    libFunc = 0; // reset the value
+	  }
 	  
+	  $$ = new FuncallStmt(temp);
 	}
         ;
 

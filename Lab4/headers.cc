@@ -231,3 +231,13 @@ public:
   void printFold();
 };
 
+
+
+class FuncallStmt : public StmtAst {
+protected:
+  Funcall* node1;
+  
+public:
+  FuncallStmt(Funcall* node1);
+  void print();
+};
