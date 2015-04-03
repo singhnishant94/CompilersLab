@@ -250,90 +250,123 @@ void If :: print(){
   cout<<")";
 }
 
-Op :: Op(ExpAst* node1, ExpAst* node2, OpType _op) {
-  this->node1 = node1;
-  this->node2 = node2;
+Op :: Op(ExpAst* _node1, ExpAst* _node2, OpType _op) {
+  node1 = _node1;
+  node2 = _node2;
   op = _op;
-}
-
-void Op :: print(){
+  
   string opr = op_value[op];
-  if (opr == "OR_OP" || opr == "AND_OP"){
-    cout<<"("<<opr<<" ";
-    node1->print();
-    cout<<" ";
-    node2->print();
-    cout<<")";
-  }
-  else if (opr == "Assign_exp"){
+  if (opr == "Assign_exp"){
     Type* t1 = node1->getType();
     Type* t2 = node2->getType();
     if (t1->basetype == Type::Int && t2->basetype == Type::Float){
-	cout<<"("<<opr<<" ";
-	node1->print();
-	cout<<" ";
-	cout<<"(TO_INT ";
-	node2->print();
-	cout<<" )";
+      node2 = new ToInt(node2);
     }
     else if (t1->basetype == Type::Float && t2->basetype == Type::Int){
-        cout<<"("<<opr<<" ";
-	node1->print();
-	cout<<" ";
-	cout<<"(TO_FLOAT ";
-	node2->print();
-	cout<<" )";
-    }
-    else{
-        cout<<"("<<opr<<" ";
-	node1->print();
-	cout<<" ";
-	node2->print();
-	cout<<")";
+      node2 = new ToFloat(node2);
     }
   }
-  else{
+  else if (!(opr == "OR_OP" || opr == "AND_OP")){
     Type* t1 = node1->getType();
     Type* t2 = node2->getType();
-    if (t1->basetype == Type::Int && t2->basetype == Type::Int){
-      cout<<"("<<opr<<"_Int ";
-      node1->print();
-      cout<<" ";
-      node2->print();
-      cout<<")";
-    }
-    else {
-      cout<<"("<<opr<<"_FLOAT ";
+    if (!(t1->basetype == Type::Int && t2->basetype == Type::Int)){
+      // Int types to be converted to float
       if (t1->basetype == Type::Int){
-	cout<<"(TO_FLOAT ";
-	node1->print();
-	cout<<")";
+	node1 = new ToFloat(node1);
       }
-      else {
-	node1->print();
-      }
-      cout<<" ";
-      
       if (t2->basetype == Type::Int){
-	cout<<"(TO_FLOAT ";
-	node2->print();
-	cout<<")";
+	node2 = new ToFloat(node2);
       }
-      else{
-	node2->print();
-      }
-      cout<<")";
     }
   }
+  
 }
 
 // void Op :: print(){
-//   cout<<"("<<op_value[op]<<" ";
-//   node1->print();
-//   cout<<" ";
-//   node2->print();
-//   cout<<")";
+//   string opr = op_value[op];
+//   if (opr == "OR_OP" || opr == "AND_OP"){
+//     cout<<"("<<opr<<" ";
+//     node1->print();
+//     cout<<" ";
+//     node2->print();
+//     cout<<")";
+//   }
+//   else if (opr == "Assign_exp"){
+//     Type* t1 = node1->getType();
+//     Type* t2 = node2->getType();
+//     if (t1->basetype == Type::Int && t2->basetype == Type::Float){
+// 	cout<<"("<<opr<<" ";
+// 	node1->print();
+// 	cout<<" ";
+// 	cout<<"(TO_INT ";
+// 	node2->print();
+// 	cout<<" )";
+//     }
+//     else if (t1->basetype == Type::Float && t2->basetype == Type::Int){
+//         cout<<"("<<opr<<" ";
+// 	node1->print();
+// 	cout<<" ";
+// 	cout<<"(TO_FLOAT ";
+// 	node2->print();
+// 	cout<<" )";
+//     }
+//     else{
+//         cout<<"("<<opr<<" ";
+// 	node1->print();
+// 	cout<<" ";
+// 	node2->print();
+// 	cout<<")";
+//     }
+//   }
+//   else{
+//     Type* t1 = node1->getType();
+//     Type* t2 = node2->getType();
+//     if (t1->basetype == Type::Int && t2->basetype == Type::Int){
+//       cout<<"("<<opr<<"_Int ";
+//       node1->print();
+//       cout<<" ";
+//       node2->print();
+//       cout<<")";
+//     }
+//     else {
+//       cout<<"("<<opr<<"_FLOAT ";
+//       if (t1->basetype == Type::Int){
+// 	cout<<"(TO_FLOAT ";
+// 	node1->print();
+// 	cout<<")";
+//       }
+//       else {
+// 	node1->print();
+//       }
+//       cout<<" ";
+      
+//       if (t2->basetype == Type::Int){
+// 	cout<<"(TO_FLOAT ";
+// 	node2->print();
+// 	cout<<")";
+//       }
+//       else{
+// 	node2->print();
+//       }
+//       cout<<")";
+//     }
+//   }
 // }
+
+
+void Op :: print(){
+  string opr = op_value[op];
+  if (!(opr == "OR_OP" || opr == "AND_OP" || opr == "Assign_exp")){
+    Type *t = node1->getType();
+    if (t->basetype == Type::Int) opr += "_Int";
+    else if (t->basetype == Type::Float) opr += "_Float";
+  }
+  cout<<"("<<opr<<" ";
+  node1->print();
+  cout<<" ";
+  node2->print();
+  cout<<")";
+}
 
 UnOp :: UnOp(ExpAst* node1, UnOpType _op) {
   this->node1 = node1;
@@ -439,8 +472,45 @@ void Index :: printFold(){
 
 FuncallStmt::FuncallStmt(Funcall* node1){
   this->node1 = node1;
+  setType(node1->getType());
 }
 
 void FuncallStmt::print(){
   node1->print();
+}
+
+
+ToFloat::ToFloat(ExpAst* node1){
+  this->node1 = node1;
+  Type *t = node1->getType();
+  if (t->tag != Type::Error){
+    setType(new Type(Type::Base, Type::Float));
+  }
+  else {
+    setType(t);
+  }
+}
+
+void ToFloat::print(){
+  cout<<"(TO_FLOAT ";
+  node1->print();
+  cout<<")";
+}
+
+
+ToInt::ToInt(ExpAst* node1){
+  this->node1 = node1;
+  Type *t = node1->getType();
+  if (t->tag != Type::Error){
+    setType(new Type(Type::Base, Type::Int));
+  }
+  else {
+    setType(t);
+  }
+}
+
+void ToInt::print(){
+  cout<<"(TO_INT ";
+  node1->print();
+  cout<<")";
 }

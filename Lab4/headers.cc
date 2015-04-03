@@ -164,7 +164,7 @@ protected:
   OpType op;
   
 public:
-  Op(ExpAst* node1, ExpAst* node2, OpType _op);
+  Op(ExpAst* _node1, ExpAst* _node2, OpType _op);
   void print();
 };
 
@@ -239,5 +239,24 @@ protected:
   
 public:
   FuncallStmt(Funcall* node1);
+  void print();
+};
+
+
+class ToFloat : public ExpAst {
+protected:
+  ExpAst* node1;
+  
+public:
+  ToFloat(ExpAst* node1);
+  void print();
+};
+
+class ToInt : public ExpAst {
+protected:
+  ExpAst* node1;
+  
+public:
+  ToInt(ExpAst* node1);
   void print();
 };
