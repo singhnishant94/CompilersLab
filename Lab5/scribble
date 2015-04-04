@@ -1,0 +1,23 @@
+glRecord:	
+	type  (var/func)
+	name
+	next ptr
+	prev ptr
+	
+
+
+funcRecord (glRecord):
+	returnType
+	pointer to local symtab
+
+varRecord (glRecord)
+	keyType eg. float, int, etc.
+
+glStructType:
+	typ (basic/arr)
+
+basicStructType (glStructType):
+	typename
+
+arrayStructType (glStructType):
+	pointer to glStructType

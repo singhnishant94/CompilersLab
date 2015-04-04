@@ -1,0 +1,13 @@
+#!/bin/sh
+
+
+
+sed -i '/include "Parser.h"/a #include "globals.cc"' Parser.ih;
+
+
+
+
+#Observe how the delimiter was changed from / to |
+#-i for inplace update
+# d for delete
+# a for append (or insert)
