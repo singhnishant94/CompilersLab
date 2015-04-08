@@ -53,7 +53,8 @@ public:
   //virtual std::string generate_code(const symbolTable&) = 0;
   virtual Type* getType() = 0;
   virtual void setType(Type*) = 0;
-  
+  //  virtual void genCode() = 0;
+
 protected:
   Type* astnode_type;
   

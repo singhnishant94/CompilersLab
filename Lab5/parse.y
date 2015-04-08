@@ -259,6 +259,10 @@ statement
 	  Identifier* id = new Identifier($1);
 	  temp->setName(id);
 	  
+	  if (currentTab->find(RecordType::VAR, $1)){
+	    cout<<$1<<" cannot be used as function, Lineno : "<<lineNo<<endl; exit(0);
+	  }
+	  
 	  if (!globalTab->find(RecordType::FUNC, $1)){
 	    if ($1 == "printf"){ // case for library function
 	      // setting the return type to Int for printf
@@ -281,6 +285,10 @@ statement
 	}
         | IDENTIFIER '(' 
 	{
+	  if (currentTab->find(RecordType::VAR, $1)){
+	    cout<<$1<<" cannot be used as function, Lineno : "<<lineNo<<endl; exit(0);
+	  }
+	  
 	  func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
 	  if (!func){
 	    if ($1 == "printf"){
@@ -498,7 +506,11 @@ postfix_expression
 	    $$ = new Funcall();
 	    Identifier* id = new Identifier($1);
 	    ((Funcall*)$$)->setName(id);
-	  
+	    
+	    if (currentTab->find(RecordType::VAR, $1)){
+	      cout<<$1<<" cannot be used as function, Lineno : "<<lineNo<<endl; exit(0);
+	    }
+	    
 	    if (!globalTab->find(RecordType::FUNC, $1)){
 	      if ($1 == "printf"){ // case for library function
 		// setting the return type to Int for printf
@@ -519,6 +531,11 @@ postfix_expression
 	}
 	| IDENTIFIER '(' 
 	{
+	  
+	  if (currentTab->find(RecordType::VAR, $1)){
+	    cout<<$1<<" cannot be used as function, Lineno : "<<lineNo<<endl; exit(0);
+	  }
+	  
 	    func = (FuncRecord*)globalTab->find(RecordType::FUNC, $1);
 	    if (!func){
 	      if ($1 == "printf"){
