@@ -5,6 +5,7 @@ sed -i '/include "Parser.h"/a #include "definitions.cc"' Parser.ih;
 
 sed -i '/insert preincludes/a #include "symtab.h"' Parserbase.h;
 sed -i '/include "Parser.h"/a #include "symtab.cc"' Parser.ih;
+sed -i '/insert preincludes/a #include <stack>' Parserbase.h;
 
 sed -i '\|STYPE__     d_val__;| d 
 ' Parserbase.h

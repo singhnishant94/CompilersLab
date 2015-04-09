@@ -39,22 +39,42 @@ public:
   };
   Type();    // Default
   Type(Kind); // Error, Ok
-  Type(Kind, Basetype); //Int, Float
+  Type(Kind, Basetype); //Int, Float, String
   Type(Kind, Type*);   // Pointer
   ~Type();
   void printType();
 };
 
 
+/* class representing the registers */
+
+class Register {
+private:
+  /* the name of register eg. eax */
+  string name;
+
+public:
+  /* Constructor needs name */
+  Register(string _name);
+
+  /* getter method to obtain the register name */
+  string getName();
+};
+
+
 class abstract_astnode
 {
 public:
+  /* rType = 2, constant exp, rType = 1, identifier, 0 otherwise */
+  int rType; 
+  
   virtual void print () = 0;
   //virtual std::string generate_code(const symbolTable&) = 0;
   virtual Type* getType() = 0;
   virtual void setType(Type*) = 0;
-  //  virtual void genCode() = 0;
-
+  virtual void genCode() = 0;
+  virtual int getrType();
+  
 protected:
   Type* astnode_type;
   
@@ -69,6 +89,7 @@ public:
   //  virtual void print () = 0;
   Type* getType();
   void setType(Type*);
+  void setLeaf();
 };
 
 class ExpAst : public abstract_astnode {
@@ -76,6 +97,7 @@ public:
   //  virtual void print () = 0;
   Type* getType();
   void setType(Type*);
+  void setLeaf();
 };
 
 class ArrayRef : public ExpAst {
@@ -92,6 +114,8 @@ public:
   Identifier(string _val);
   void print();
   void printFold();
+  void genCode();
+  string getIdentifierName();
 };
 
 class BlockAst : public StmtAst {
@@ -102,6 +126,7 @@ public:
   BlockAst();
   void print();
   void add(StmtAst* stmtAst);
+  void genCode();
 };
 
 class Ass : public StmtAst {
@@ -112,6 +137,7 @@ protected:
 public:
   Ass(ExpAst* node1, ExpAst* node2);
   void print();
+  void genCode();
 };
 
 class While : public StmtAst {
@@ -122,6 +148,7 @@ protected:
 public:
   While(ExpAst* node1, StmtAst* node2);
   void print();
+  void genCode();
 };
 
 class For : public StmtAst {
@@ -134,6 +161,7 @@ protected:
 public:
   For(ExpAst* node1, ExpAst* node2, ExpAst* node3, StmtAst* node4);
   void print();
+  void genCode();
 };
 
 class Return : public StmtAst {
@@ -143,6 +171,7 @@ protected:
 public:
   Return(ExpAst* node1);
   void print();
+  void genCode();
 };
 
 
@@ -155,6 +184,7 @@ protected:
 public:
   If(ExpAst* node1, StmtAst* node2, StmtAst* node3);
   void print();
+  void genCode();
 };
 
 
@@ -167,6 +197,7 @@ protected:
 public:
   Op(ExpAst* _node1, ExpAst* _node2, OpType _op);
   void print();
+  void genCode();
 };
 
 class UnOp : public ExpAst {
@@ -179,6 +210,7 @@ public:
   UnOp(UnOpType _op);
   void print();
   void setExp(ExpAst* node1);
+  void genCode();
 };
 
 class Funcall : public ExpAst {
@@ -191,6 +223,7 @@ public:
   void setName(Identifier* _funName);
   void print();
   void addExp(ExpAst* exp);
+  void genCode();
 };
 
 class FloatConst : public ExpAst {
@@ -200,6 +233,8 @@ protected:
 public:
   FloatConst(float _val);
   void print();
+  void genCode();
+  float getValue();
 };
 
 class IntConst : public ExpAst {
@@ -209,6 +244,8 @@ protected:
 public:
   IntConst(int _val);
   void print();
+  void genCode();
+  int getValue();
 };
 
 class StringConst : public ExpAst {
@@ -218,6 +255,8 @@ protected:
 public:
   StringConst(string _val);
   void print();
+  void genCode();
+  string getValue();
 };
 
 
@@ -230,6 +269,7 @@ public:
   Index(ArrayRef* node1, ExpAst* node2);
   void print();
   void printFold();
+  void genCode();
 };
 
 
@@ -241,6 +281,7 @@ protected:
 public:
   FuncallStmt(Funcall* node1);
   void print();
+  void genCode();
 };
 
 
@@ -251,6 +292,7 @@ protected:
 public:
   ToFloat(ExpAst* node1);
   void print();
+  void genCode();
 };
 
 class ToInt : public ExpAst {
@@ -260,4 +302,6 @@ protected:
 public:
   ToInt(ExpAst* node1);
   void print();
+  void genCode();
 };
+

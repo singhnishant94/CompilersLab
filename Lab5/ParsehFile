@@ -12,6 +12,8 @@ int GlOffset;
 int curOffset;
 int width;
 int libFunc;
+stack<Register*> regStack;
+int countReg;
 
 Parser(){
 	globalTab = new SymTab();
@@ -25,9 +27,18 @@ Parser(){
 	curOffset = 0;
 	width = 0;
 	libFunc = 0;
+	string regName[] = {"eax", "ebx", "ecx", "edx"};
+	countReg = 4;
+	for (int i = 0; i < countReg; i++){
+	    regStack.push(new Register(regName[i]));
+	}
 }
 
 ~Parser()
 {
-
+	for (int i = 0; i < countReg; i++){
+	    Register* top = regStack.top();
+	    regStack.pop();
+	    delete top;
+	}
 }

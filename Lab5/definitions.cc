@@ -123,6 +123,25 @@ Type* getVarType(GlType *typ){
   }
 }
 
+
+/* Deifnitions for register class */
+
+Register::Register(string _name){
+  name = _name;
+}
+
+/* getter method to obtain the register name */
+string Register::getName(){
+  return name;
+}
+
+
+/* Definitions for the AST's */
+
+int abstract_astnode :: getrType(){
+  return rType;
+}
+
 Type* StmtAst::getType(){
   return astnode_type;
 }
@@ -138,6 +157,7 @@ Type* ExpAst::getType(){
 void ExpAst::setType(Type* t){
   astnode_type = t;
 }
+
 
 BlockAst :: BlockAst(){
 }
@@ -278,6 +298,7 @@ Op :: Op(ExpAst* _node1, ExpAst* _node2, OpType _op) {
   node1 = _node1;
   node2 = _node2;
   op = _op;
+  rType = 0;
   
   string opr = op_value[op];
   if (opr == "Assign_exp"){
@@ -380,11 +401,13 @@ Op :: Op(ExpAst* _node1, ExpAst* _node2, OpType _op) {
 
 void Op :: print(){
   string opr = op_value[op];
+
   if (!(opr == "OR_OP" || opr == "AND_OP" || opr == "Assign_exp")){
     Type *t = node1->getType();
     if (t->basetype == Type::Int) opr += "_Int";
     else if (t->basetype == Type::Float) opr += "_Float";
   }
+
   cout<<"("<<opr<<" ";
   node1->print();
   cout<<" ";
@@ -395,6 +418,7 @@ void Op :: print(){
 UnOp :: UnOp(ExpAst* node1, UnOpType _op) {
   this->node1 = node1;
   op = _op;
+  rType = 0;
 }
 
 UnOp :: UnOp(UnOpType _op){
@@ -413,6 +437,7 @@ void UnOp::setExp(ExpAst* node1){
 }
 
 Funcall :: Funcall() {
+  rType = 0;
 }
 
 void Funcall :: print(){
@@ -438,14 +463,24 @@ void Funcall :: addExp(ExpAst* exp){
 
 FloatConst :: FloatConst(float _val) {
   val = _val;
+  rType = 2;
 }
 
 void FloatConst :: print(){
   cout<<"(FloatConst "<<val<<")";
 }
 
+float FloatConst :: getValue(){
+  return val;
+}
+
 IntConst :: IntConst(int _val) {
   val = _val;
+  rType = 2;
+}
+
+int IntConst :: getValue(){
+  return val;
 }
 
 void IntConst :: print(){
@@ -454,6 +489,11 @@ void IntConst :: print(){
 
 StringConst :: StringConst(string _val) {
   val = _val;
+  rType = 2;
+}
+
+string StringConst :: getValue(){
+  return val;
 }
 
 void StringConst :: print(){
@@ -466,6 +506,7 @@ ArrayRef :: ArrayRef() {
 
 Identifier :: Identifier(string _val) {
   val = _val;
+  rType = 1;
 }
 
 void Identifier :: print(){
@@ -479,6 +520,7 @@ void Identifier :: printFold(){
 Index :: Index(ArrayRef* node1, ExpAst* node2) {
   this->node1 = node1;
   this->node2 = node2;
+  rType = 0;
 }
 
 void Index :: print(){
@@ -513,6 +555,14 @@ ToFloat::ToFloat(ExpAst* node1){
   else {
     setType(t);
   }
+  
+  if (node1->getrType() > 1){
+    rType = 2;
+  }
+  else {
+    rType = 1;
+  }
+
 }
 
 void ToFloat::print(){
@@ -531,6 +581,13 @@ ToInt::ToInt(ExpAst* node1){
   else {
     setType(t);
   }
+
+  if (node1->getrType() > 1){
+    rType = 2;
+  }
+  else {
+    rType = 1;
+  }
 }
 
 void ToInt::print(){
@@ -538,3 +595,148 @@ void ToInt::print(){
   node1->print();
   cout<<")";
 }
+
+//////////////////////////////////////////////////////
+/* global functions to help register management */
+
+stack<Register*> regStack;   // tmp fix
+
+/* swaps the top two registers */
+void swapTopReg(stack<Register*> &regStack){
+  int l = regStack.size();
+  if (l >= 2){
+    Register* f = regStack.top();
+    regStack.pop();
+    Register* s = regStack.top();
+    regStack.pop();
+    regStack.push(f);
+    regStack.push(s);
+  }
+}
+
+
+//////////////////////////////////////////////////////
+/* the genCode functions for all the ast are defined here */
+
+
+void Identifier::genCode(){}
+void BlockAst::genCode(){}
+void Ass::genCode(){}
+void While::genCode(){}
+void For::genCode(){}
+void Return::genCode(){}
+void If::genCode(){}
+
+void Op::genCode(){
+  string opr = op_value[op];
+  if (opr == "Plus"){
+    if (astnode_type->basetype == Type::Int){
+      /* handling the int plus here */
+      int lr = node1->getrType();
+      int rr = node2->getrType();
+      if (lr > 1 || rr > 1){
+	if (lr > 1 && rr > 1){
+	  // both are constants
+	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
+	  
+	  Register* top = regStack.top();
+	  string regName = top->getName();
+	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+	}
+	else if (lr > 1){
+	  // left is constant
+	  node2->genCode();  // gencode for right
+	  int lval = ((IntConst*)node1)->getValue();
+	  Register* top = regStack.top();
+	  string regName = top->getName();
+	  cout<<"addi("<<lval<<","<<regName<<")"<<endl;
+	}
+	else {
+	  // right is constant
+	  node1->genCode();  // gencode for right
+	  int rval = ((IntConst*)node2)->getValue();
+	  Register* top = regStack.top();
+	  string regName = top->getName();
+	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+	}
+      }
+      else if (lr > 0 || rr > 0){
+	// one of the exp is an identifier
+	if (lr > 0){
+	  // left exp is an identifier
+	  node2->genCode(); // gen code for right,top reg has value
+	  swapTopReg(regStack);
+	  node1->genCode();  // gen loadi code from the LHS
+	  swapTopReg(regStack);
+	  
+	  // adding the top two registers
+	  Register* top1 = regStack.top();  
+	  string regName1 = top1->getName();
+	  regStack.pop();
+	  
+	  Register* top2 = regStack.top(); 
+	  string regName2 = top2->getName();
+	  
+	  regStack.push(top1);
+	  cout<<"add("<<regName1<<","<<regName2<<")"<<endl;
+
+	}
+	else {
+	  // right expression is an identifier
+	  node1->genCode(); // gen code for left,top reg has value
+	  swapTopReg(regStack);
+	  node2->genCode();  // gen loadi code from the RHS
+	  swapTopReg(regStack);
+	  
+	  // adding the top two registers
+	  Register* top1 = regStack.top();  
+	  string regName1 = top1->getName();
+	  regStack.pop();
+	  
+	  Register* top2 = regStack.top(); 
+	  string regName2 = top2->getName();
+	  
+	  regStack.push(top1);
+	  cout<<"add("<<regName1<<","<<regName2<<")"<<endl;
+
+	}
+      }
+      else {
+      
+      }
+    }
+    else if (astnode_type->basetype == Type::Float){
+      // handling the float case here
+    }
+    else {
+      /* handling string here */
+      
+    }
+  }
+  else if (opr == "Minus"){
+  
+  }
+  else if (opr == "Mult"){
+  
+  }
+  else if (opr == "Div"){
+  
+  }
+  else if (opr == "Assign_exp"){
+    
+  }
+  else {
+    
+  }
+}
+
+void UnOp::genCode(){}
+void Funcall::genCode(){}
+void FloatConst::genCode(){}
+void IntConst::genCode(){}
+void StringConst::genCode(){}
+void Index::genCode(){}
+void FuncallStmt::genCode(){}
+void ToFloat::genCode(){}
+void ToInt::genCode(){}
