@@ -72,7 +72,7 @@ public:
   //virtual std::string generate_code(const symbolTable&) = 0;
   virtual Type* getType() = 0;
   virtual void setType(Type*) = 0;
-  virtual void genCode() = 0;
+  virtual void genCode(stack<Register*> &regStack) = 0;
   virtual int getrType();
   
 protected:
@@ -109,13 +109,15 @@ public:
 class Identifier : public ArrayRef {
 protected:
   string val;
+  GlRecord* rec;
 
 public:
   Identifier(string _val);
   void print();
   void printFold();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
   string getIdentifierName();
+  void setRecord(GlRecord*);
 };
 
 class BlockAst : public StmtAst {
@@ -126,7 +128,7 @@ public:
   BlockAst();
   void print();
   void add(StmtAst* stmtAst);
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class Ass : public StmtAst {
@@ -137,7 +139,7 @@ protected:
 public:
   Ass(ExpAst* node1, ExpAst* node2);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class While : public StmtAst {
@@ -148,7 +150,7 @@ protected:
 public:
   While(ExpAst* node1, StmtAst* node2);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class For : public StmtAst {
@@ -161,7 +163,7 @@ protected:
 public:
   For(ExpAst* node1, ExpAst* node2, ExpAst* node3, StmtAst* node4);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class Return : public StmtAst {
@@ -171,7 +173,7 @@ protected:
 public:
   Return(ExpAst* node1);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 
@@ -184,7 +186,7 @@ protected:
 public:
   If(ExpAst* node1, StmtAst* node2, StmtAst* node3);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 
@@ -197,7 +199,7 @@ protected:
 public:
   Op(ExpAst* _node1, ExpAst* _node2, OpType _op);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class UnOp : public ExpAst {
@@ -210,7 +212,7 @@ public:
   UnOp(UnOpType _op);
   void print();
   void setExp(ExpAst* node1);
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class Funcall : public ExpAst {
@@ -223,7 +225,7 @@ public:
   void setName(Identifier* _funName);
   void print();
   void addExp(ExpAst* exp);
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class FloatConst : public ExpAst {
@@ -233,7 +235,7 @@ protected:
 public:
   FloatConst(float _val);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
   float getValue();
 };
 
@@ -244,7 +246,7 @@ protected:
 public:
   IntConst(int _val);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
   int getValue();
 };
 
@@ -255,7 +257,7 @@ protected:
 public:
   StringConst(string _val);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
   string getValue();
 };
 
@@ -269,7 +271,7 @@ public:
   Index(ArrayRef* node1, ExpAst* node2);
   void print();
   void printFold();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 
@@ -281,7 +283,7 @@ protected:
 public:
   FuncallStmt(Funcall* node1);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 
@@ -292,7 +294,7 @@ protected:
 public:
   ToFloat(ExpAst* node1);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 
 class ToInt : public ExpAst {
@@ -302,6 +304,6 @@ protected:
 public:
   ToInt(ExpAst* node1);
   void print();
-  void genCode();
+  void genCode(stack<Register*> &regStack);
 };
 

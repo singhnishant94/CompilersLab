@@ -43,6 +43,7 @@ function_definition
 	compound_statement 
 	{
 	  $$ = $4;
+	  $$->genCode(regStack);
 	  currentTab = globalTab;
 	}
 	;
@@ -650,6 +651,7 @@ l_expression
 		curGlType = temp->keyType;
 		Type *t = getVarType(curGlType);
 		$$->setType(t);
+		((Identifier*)$$)->setRecord(temp);
 	    }
 	}
         | l_expression '[' expression ']' 	
