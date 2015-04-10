@@ -561,13 +561,7 @@ ToFloat::ToFloat(ExpAst* node1){
     setType(t);
   }
   
-  if (node1->getrType() > 1){
-    rType = 2;
-  }
-  else {
-    rType = 1;
-  }
-
+  rType = 0;
 }
 
 void ToFloat::print(){
@@ -587,12 +581,7 @@ ToInt::ToInt(ExpAst* node1){
     setType(t);
   }
 
-  if (node1->getrType() > 1){
-    rType = 2;
-  }
-  else {
-    rType = 1;
-  }
+  rType = 0;
 }
 
 void ToInt::print(){
@@ -650,6 +639,7 @@ void Identifier::genCode(stack<Register*> &regStack){
   }
   else {
     /* unknown case */
+    cout<<"Not supported identifier type"<<endl;
   }
 }
 
@@ -704,13 +694,42 @@ void Op::genCode(stack<Register*> &regStack){
 
 void UnOp::genCode(stack<Register*> &regStack){}
 void Funcall::genCode(stack<Register*> &regStack){}
-void FloatConst::genCode(stack<Register*> &regStack){}
-void IntConst::genCode(stack<Register*> &regStack){}
+
+void FloatConst::genCode(stack<Register*> &regStack){
+  int countReg = regStack.size();
+  Register *top = regStack.top();
+  string regName = top->getName();
+  float val = getValue();
+  cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
+}
+
+void IntConst::genCode(stack<Register*> &regStack){
+  int countReg = regStack.size();
+  Register *top = regStack.top();
+  string regName = top->getName();
+  int val = getValue();
+  cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
+}
+
 void StringConst::genCode(stack<Register*> &regStack){}
 void Index::genCode(stack<Register*> &regStack){}
 void FuncallStmt::genCode(stack<Register*> &regStack){}
-void ToFloat::genCode(stack<Register*> &regStack){}
-void ToInt::genCode(stack<Register*> &regStack){}
+
+void ToFloat::genCode(stack<Register*> &regStack){
+  int countReg = regStack.size();
+  node1->genCode(regStack);   // constant loads itself on top Reg
+  Register* top = regStack.top();
+  string regName = top->getName();
+  cout<<"intTofloat("<<regName<<")"<<endl;
+}
+
+void ToInt::genCode(stack<Register*> &regStack){
+  int countReg = regStack.size();
+  node1->genCode(regStack);   // constant loads itself on top Reg
+  Register* top = regStack.top();
+  string regName = top->getName();
+  cout<<"floatToint("<<regName<<")"<<endl;
+}
 
 
 /* This is a template class based function 
