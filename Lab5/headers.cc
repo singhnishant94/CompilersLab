@@ -307,3 +307,63 @@ public:
   void genCode(stack<Register*> &regStack);
 };
 
+
+
+////////////////////////////////
+/* class for holding the code */
+////////////////////////////////
+
+
+class Code {
+public:
+  /* Code representation, 
+     funcall, argument1, <optional argument2> */
+  int argCount;
+  string func, arg1, arg2; 
+  
+  /* Code may have a label attached */
+  int hasLabel;
+  string label;
+  
+  /* Goto statements are special */
+  int isGoto;
+  
+  /* operations , int = 1 means goto type */
+  Code(int, string, string, string);
+  Code(int, string, string);
+  
+  /* backpatch the goto with another Code */
+  void backPatch(Code*);
+  
+  /* set label from a list of global labels */
+  void setLabel();
+  
+  /* get current Label */
+  string getLabel();
+  
+  /* prints the Code accordingly */
+  void print();
+};
+
+
+
+
+///////////////////////////////////////////////////////
+/* classes for handling loops, proper goto direction */
+///////////////////////////////////////////////////////
+
+
+/* Represents the list of Code lines 
+   Eg. TrueList, FalseList, NextList */
+
+class CList {
+public:
+  /* pointer to Codes aggregated under this list */
+  vector<Code*> arr;
+  
+  /* add new Code to the array */
+  void add(Code*);
+  
+  /* backPatch the arr with sprecified Code line */
+  void backPath(Code*);
+};
