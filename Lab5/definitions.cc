@@ -676,570 +676,29 @@ void If::genCode(stack<Register*> &regStack){}
 void Op::genCode(stack<Register*> &regStack){
   int countReg = regStack.size();
   string opr = op_value[op];
-  /*  --------------------------------------PLUS---------------------------------------------------------- */
-
-  if (opr == "Plus"){    
-    /* addition is handled here */
-    
+  
+  if (opr == "Plus" && astnode_type->basetype == Type::String){
+    // TODO for strings
+  }
+  else if (opr == "Plus" || opr == "Minus" || opr == "Mult" || opr == "Div"){
     if (astnode_type->basetype == Type::Int){
-      /* handling the int plus here */
-      int lr = node1->getrType();
-      int rr = node2->getrType();
-      if (lr > 1 || rr > 1){
-
-	// Case when one of subexpression is constant
-	if (lr > 1 && rr > 1){
-	  // both are constants
-	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
-	  
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
-	}
-	else if (lr > 1){
-	  // left is constant
-	  node2->genCode(regStack);  // gencode for right
-	  int lval = ((IntConst*)node1)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"addi("<<lval<<","<<regName<<")"<<endl;
-	}
-	else {
-	  // right is constant
-	  node1->genCode(regStack);  // gencode for right
-	  int rval = ((IntConst*)node2)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
-	}
-      }
-      // else if (lr > 0 || rr > 0){
-      // 	// one of the exp is an identifier
-      // 	if (lr > 0){
-      // 	  // left exp is an identifier
-      // 	  node2->genCode(regStack); // gen code for right, top reg has value
-      // 	  swapTopReg(regStack);
-      // 	  node1->genCode(regStack);  // gen loadi code from the LHS
-      // 	  swapTopReg(regStack);
-	  
-      // 	  // adding the top two registers
-      // 	  Register* top1 = regStack.top();  
-      // 	  string regName1 = top1->getName();
-      // 	  regStack.pop();
-	  
-      // 	  Register* top2 = regStack.top(); 
-      // 	  string regName2 = top2->getName();
-	  
-      // 	  regStack.push(top1);
-      // 	  cout<<"add("<<regName1<<","<<regName2<<")"<<endl;
-
-      // 	}
-      // 	else {
-      // 	  // right expression is an identifier
-      // 	  node1->genCode(regStack); // gen code for left,top reg has value
-      // 	  swapTopReg(regStack);
-      // 	  node2->genCode(regStack);  // gen loadi code from the RHS
-      // 	  swapTopReg(regStack);
-	  
-      // 	  // adding the top two registers
-      // 	  Register* top1 = regStack.top();  
-      // 	  string regName1 = top1->getName();
-      // 	  regStack.pop();
-	  
-      // 	  Register* top2 = regStack.top(); 
-      // 	  string regName2 = top2->getName();
-	  
-      // 	  regStack.push(top1);
-      // 	  cout<<"add("<<regName1<<","<<regName2<<")"<<endl;
-
-      // 	}
-      // }
-      else {
-
-	/* When none of subtree is constant */
-	if (countReg > 2){
-
-	  // Storeless add possible
-	  swapTopReg(regStack);
-	  node2->genCode(regStack);  // Evaluating the right subtree
-
-	  Register* top2 = regStack.top();
-	  regStack.pop();
-	  node1->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  string regName2 = top2->getName();
-	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);
-	  swapTopReg(regStack); // top1 contanis the evaulated expression
-	}
-	else {
-
-	  // only 2 reg left, need for a store in this case
-	  node2->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value
-	  node1->genCode(regStack);
-	  
-	  swapTopReg(regStack);
-	  Register* top2 = regStack.top();
-	  string regName2 = top2->getName();
-	  // To load the esp into regName2
-	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;
-	  cout<<"popi(1)"<<endl;
-	  regStack.pop();
-	  top1 = regStack.top();
-	  regName1 = top1->getName();
-	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);   // store the reg back
-	  swapTopReg(regStack);   // restore regName1 to top
-	}
-      }
+      int d1;
+      IntConst d2(1);
+      string type = "i";
+      genCodeTemplate(d1, d2, type, regStack, opr);
     }
     else if (astnode_type->basetype == Type::Float){
-      /* handling the FLOAT case here */
-
-      int lr = node1->getrType();
-      int rr = node2->getrType();
-      if (lr > 1 || rr > 1){
-
-	// Case when one of subexpression is constant
-	if (lr > 1 && rr > 1){
-	  // both subtree are constants
-
-	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
-	  
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;
-	}
-	else if (lr > 1){
-	  // left subtree is constant
-
-	  node2->genCode(regStack);  // gencode for right
-	  float lval = ((FloatConst*)node1)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"addf("<<lval<<","<<regName<<")"<<endl;
-	}
-	else {
-	  // right subtree is constant
-
-	  node1->genCode(regStack);  // gencode for right
-	  float rval = ((FloatConst*)node2)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;
-	}
-      }
-      else {
-
-	/* When none of subtree is constant */
-	if (countReg > 2){
-
-	  // Storeless add possible
-	  swapTopReg(regStack);
-	  node2->genCode(regStack);  // Evaluating the right subtree
-
-	  Register* top2 = regStack.top();
-	  regStack.pop();
-	  node1->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  string regName2 = top2->getName();
-	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);
-	  swapTopReg(regStack); // top1 contanis the evaulated expression
-	}
-	else {
-
-	  // only 2 reg left, need for a store in this case
-	  node2->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value
-	  node1->genCode(regStack);
-	  
-	  swapTopReg(regStack);
-	  Register* top2 = regStack.top();
-	  string regName2 = top2->getName();
-	  // To load the esp into regName2
-	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;
-	  cout<<"popf(1)"<<endl;
-	  regStack.pop();
-	  top1 = regStack.top();
-	  regName1 = top1->getName();
-	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);   // store the reg back
-	  swapTopReg(regStack);   // restore regName1 to top
-	
-	}
-      }
+      float d1;
+      FloatConst d2(1.0);
+      string type = "f";
+      genCodeTemplate(d1, d2, type, regStack, opr);
     }
     else {
-      /* handling string here */
-      // TODO
+      cout<<"Type not supported"<<endl;
     }
-  }
-  /*  ----------------------------------------MINUS---------------------------------------------------------- */
-  else if (opr == "Minus"){
-    /* multiplication is handled here */
-    
-    if (astnode_type->basetype == Type::Int){
-      /* handling the int plus here */
-      int lr = node1->getrType();
-      int rr = node2->getrType();
-      if (lr > 1 || rr > 1){
-
-	// Case when one of subexpression is constant
-	if (lr > 1 && rr > 1){
-	  // both are constants
-	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
-	  // the constant is negated for using add
-	  rval *= -1;        
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
-	}
-	else if (lr > 1){
-	  // left is constant
-	  node2->genCode(regStack);          // gencode for right
-	  int lval = ((IntConst*)node1)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"muli(-1, "<<regName<<")"<<endl;             // negating the register value by mult with -1
-	  cout<<"addi("<<lval<<","<<regName<<")"<<endl;      // normal addition 
-	}
-	else {
-	  // right is constant
-	  node1->genCode(regStack);           // gencode for right
-	  int rval = ((IntConst*)node2)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  // constant is negated to use add function
-	  rval = -rval;
-	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
-	}
-      }
-      else {
-
-	/* When none of subtree is constant */
-	if (countReg > 2){
-
-	  // Storeless add possible
-	  swapTopReg(regStack);
-	  node2->genCode(regStack);  // Evaluating the right subtree
-
-	  Register* top2 = regStack.top();
-	  regStack.pop();
-	  node1->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();    // LHS
-	  string regName2 = top2->getName();    // RHS
-	  cout<<"muli(-1, "<<regName2<<")"<<endl;                // RHS = -RHS
-	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + (-RHS)
-	  regStack.push(top2);
-	  swapTopReg(regStack); // top1 contanis the evaulated expression
-	}
-	else {
-
-	  // only 2 reg left, need for a store in this case
-	  node2->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  cout<<"muli(-1, "<<regName1<<")"<<endl;    // RHS = -RHS
-	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value, -RHS
-	  node1->genCode(regStack);
-	  
-	  swapTopReg(regStack);
-	  Register* top2 = regStack.top();
-	  string regName2 = top2->getName();
-	  // To load the esp into regName2
-	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;   // -RHS in regName2
-	  cout<<"popi(1)"<<endl;
-	  regStack.pop();
-	  top1 = regStack.top();
-	  regName1 = top1->getName();
-	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + (-RHS)
-	  regStack.push(top2);   // store the reg back
-	  swapTopReg(regStack);   // restore regName1 to top
-	}
-      }
-    }
-    else if (astnode_type->basetype == Type::Float){
-      /* handling the FLOAT case here */
-
-      int lr = node1->getrType();
-      int rr = node2->getrType();
-      if (lr > 1 || rr > 1){
-
-	// Case when one of subexpression is constant
-	if (lr > 1 && rr > 1){
-	  // both subtree are constants
-
-	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
-	  rval = -rval;                         // RHS = -RHS 
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;    // LHS + (-RHS)
-	}
-	else if (lr > 1){
-	  // left subtree is constant
-
-	  node2->genCode(regStack);  // gencode for right
-	  float lval = ((FloatConst*)node1)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"mulf(-1, "<<regName<<")"<<endl;            // RHS = -RHS
-	  cout<<"addf("<<lval<<","<<regName<<")"<<endl;     // LHS + (-RHS)
-	}
-	else {
-	  // right subtree is constant
-
-	  node1->genCode(regStack);  // gencode for right
-	  float rval = ((FloatConst*)node2)->getValue();
-	  rval = -rval;                           // RHS = -RHS
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;    // LHS = LHS +  -RHS
-	}
-      }
-      else {
-
-	/* When none of subtree is constant */
-	if (countReg > 2){
-
-	  // Storeless add possible
-	  swapTopReg(regStack);
-	  node2->genCode(regStack);  // Evaluating the right subtree
-
-	  Register* top2 = regStack.top();
-	  regStack.pop();
-	  node1->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  string regName2 = top2->getName();
-	  cout<<"mulf(-1, "<<regName2<<")"<<endl;                      // RHS = -RHS
-	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;          // LHS + -RHS
-	  regStack.push(top2);
-	  swapTopReg(regStack); // top1 contanis the evaulated expression
-	}
-	else {
-
-	  // only 2 reg left, need for a store in this case
-	  node2->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  cout<<"mulf(-1, "<<regName1<<")"<<endl;          // RHS = -RHS
-	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value, -RHS
-	  node1->genCode(regStack);
-	  
-	  swapTopReg(regStack);
-	  Register* top2 = regStack.top();
-	  string regName2 = top2->getName();
-	  // To load the esp into regName2
-	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;    // load -RHS
-	  cout<<"popf(1)"<<endl;
-	  regStack.pop();
-	  top1 = regStack.top();
-	  regName1 = top1->getName();
-	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);   // store the reg back
-	  swapTopReg(regStack);   // restore regName1 to top
-	
-	}
-      }
-    }
-  }
-  /*  -----------------------------------------MULT---------------------------------------------------------- */
-  else if (opr == "Mult"){
-    /* Multiplication is handled here */
-    
-    if (astnode_type->basetype == Type::Int){
-      /* handling the int plus here */
-      int lr = node1->getrType();
-      int rr = node2->getrType();
-      if (lr > 1 || rr > 1){
-
-	// Case when one of subexpression is constant
-	if (lr > 1 && rr > 1){
-	  // both are constants
-	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
-	  
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"muli("<<rval<<","<<regName<<")"<<endl;
-	}
-	else if (lr > 1){
-	  // left is constant
-	  node2->genCode(regStack);  // gencode for right
-	  int lval = ((IntConst*)node1)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"muli("<<lval<<","<<regName<<")"<<endl;
-	}
-	else {
-	  // right is constant
-	  node1->genCode(regStack);  // gencode for right
-	  int rval = ((IntConst*)node2)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"muli("<<rval<<","<<regName<<")"<<endl;
-	}
-      }
-      else {
-
-	/* When none of subtree is constant */
-	if (countReg > 2){
-
-	  // Storeless mul possible
-	  swapTopReg(regStack);
-	  node2->genCode(regStack);  // Evaluating the right subtree
-
-	  Register* top2 = regStack.top();
-	  regStack.pop();
-	  node1->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  string regName2 = top2->getName();
-	  cout<<"muli("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);
-	  swapTopReg(regStack); // top1 contanis the evaulated expression
-	}
-	else {
-
-	  // only 2 reg left, need for a store in this case
-	  node2->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value
-	  node1->genCode(regStack);
-	  
-	  swapTopReg(regStack);
-	  Register* top2 = regStack.top();
-	  string regName2 = top2->getName();
-	  // To load the esp into regName2
-	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;
-	  cout<<"popi(1)"<<endl;
-	  regStack.pop();
-	  top1 = regStack.top();
-	  regName1 = top1->getName();
-	  cout<<"muli("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);   // store the reg back
-	  swapTopReg(regStack);   // restore regName1 to top
-	}
-      }
-    }
-    else if (astnode_type->basetype == Type::Float){
-      /* handling the FLOAT case here */
-
-      int lr = node1->getrType();
-      int rr = node2->getrType();
-      if (lr > 1 || rr > 1){
-
-	// Case when one of subexpression is constant
-	if (lr > 1 && rr > 1){
-	  // both subtree are constants
-
-	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
-	  
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"mulf("<<rval<<","<<regName<<")"<<endl;
-	}
-	else if (lr > 1){
-	  // left subtree is constant
-
-	  node2->genCode(regStack);  // gencode for right
-	  float lval = ((FloatConst*)node1)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"mulf("<<lval<<","<<regName<<")"<<endl;
-	}
-	else {
-	  // right subtree is constant
-
-	  node1->genCode(regStack);  // gencode for right
-	  float rval = ((FloatConst*)node2)->getValue();
-	  Register* top = regStack.top();
-	  string regName = top->getName();
-	  cout<<"mulf("<<rval<<","<<regName<<")"<<endl;
-	}
-      }
-      else {
-
-	/* When none of subtree is constant */
-	if (countReg > 2){
-
-	  // Storeless mul possible
-	  swapTopReg(regStack);
-	  node2->genCode(regStack);  // Evaluating the right subtree
-
-	  Register* top2 = regStack.top();
-	  regStack.pop();
-	  node1->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  string regName2 = top2->getName();
-	  cout<<"mulf("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);
-	  swapTopReg(regStack); // top1 contanis the evaulated expression
-	}
-	else {
-
-	  // only 2 reg left, need for a store in this case
-	  node2->genCode(regStack);
-
-	  Register* top1 = regStack.top();
-	  string regName1 = top1->getName();
-	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value
-	  node1->genCode(regStack);
-	  
-	  swapTopReg(regStack);
-	  Register* top2 = regStack.top();
-	  string regName2 = top2->getName();
-	  // To load the esp into regName2
-	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;
-	  cout<<"popf(1)"<<endl;
-	  regStack.pop();
-	  top1 = regStack.top();
-	  regName1 = top1->getName();
-	  cout<<"mulf("<<regName1<<", "<<regName2<<")"<<endl;
-	  regStack.push(top2);   // store the reg back
-	  swapTopReg(regStack);   // restore regName1 to top
-	
-	}
-      }
-    }
-  }
-  /*  -----------------------------------------DIV---------------------------------------------------------- */
-  else if (opr == "Div"){
-    
-  }
-  /*  -----------------------------------------ASSIGN_EXP---------------------------------------------------------- */
-  else if (opr == "Assign_exp"){
-    
   }
   else {
-    
+    // TODO for other cases
   }
 }
 
@@ -1252,3 +711,932 @@ void Index::genCode(stack<Register*> &regStack){}
 void FuncallStmt::genCode(stack<Register*> &regStack){}
 void ToFloat::genCode(stack<Register*> &regStack){}
 void ToInt::genCode(stack<Register*> &regStack){}
+
+
+/* This is a template class based function 
+   supporting correctness for Int, Float
+   for operators - Plus, Minus, Div, mult 
+   T -> int / float
+   Rtype -> IntConst / FloatConst  */
+   
+template<class T, class Rtype>
+void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack, string opr){
+  int countReg = regStack.size();
+  int lr = node1->getrType();
+  int rr = node2->getrType();
+  if (lr > 1 || rr > 1){
+
+    // Case when one of subexpression is constant
+    if (lr > 1 && rr > 1){
+      // both subtree are constants
+      T lval = ((Rtype*)node1)->getValue(), rval = ((Rtype*)node2)->getValue();	  
+      Register* top = regStack.top();
+      string regName = top->getName();
+      
+      if (opr == "Plus"){
+	cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+      }
+      else if (opr == "Minus"){
+	rval = -1;                                               // RHS = -RHS
+	cout<<"move("<<lval<<","<<regName<<")"<<endl;
+	cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;   // LHS + -RHS
+      }
+      else if (opr == "Mult"){
+	cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	cout<<"mul"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+      }
+      else if (opr == "Div"){
+	cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;   // LHS div RHS
+      }
+      else {
+	cout<<"Not suppored for this operator"<<endl;
+      }
+
+    }
+    else if (lr > 1){
+      // left is constant
+
+      node2->genCode(regStack);  // gencode for right
+      T lval = ((Rtype*)node1)->getValue();
+      Register* top = regStack.top();
+      string regName = top->getName();
+
+      if (opr == "Plus"){
+	cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+      }
+      else if (opr == "Minus"){
+	cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;             // RHS = -RHS
+	cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;      // LHS + -RHS
+      }
+      else if (opr == "Mult"){
+	cout<<"mul"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+      }
+      else if (opr == "Div"){
+	cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+      }
+      else {
+	cout<<"operation not supported"<<endl;
+      }
+
+    }
+    else {
+      // right is constant
+      node1->genCode(regStack);  // gencode for right
+      T rval = ((Rtype*)node2)->getValue();
+      Register* top = regStack.top();
+      string regName = top->getName();
+
+      if (opr == "Plus"){
+	cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;
+      }
+      else if (opr == "Minus"){
+	rval = -rval;                                               // RHS = -RHS
+	cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;      // LHS + -RHS
+      }
+      else if (opr == "Mult"){
+	cout<<"mul"<<type<<"("<<rval<<","<<regName<<")"<<endl;
+      }
+      else if (opr == "Div"){
+	/* Need to load RHS into register */
+	regStack.pop();
+	Register* top2 = regStack.top();
+	string regName2 = top2->getName();
+	cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
+	cout<<"div"<<type<<"("<<regName<<", "<<regName2<<")"<<endl;  // LHS div RHS
+	regStack.push(top);                                          // restore the pop
+      }
+      else {
+	cout<<"operation not supported"<<endl;
+      }
+
+    }
+  }
+  else {
+
+    /* When none of subtree is constant */
+    if (countReg > 2){
+
+      // Storeless add possible
+      swapTopReg(regStack);
+      node2->genCode(regStack);  // Evaluating the right subtree
+
+      Register* top2 = regStack.top();
+      regStack.pop();
+      node1->genCode(regStack);
+
+      Register* top1 = regStack.top();
+      string regName1 = top1->getName();
+      string regName2 = top2->getName();
+
+      if (opr == "Plus"){
+	cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else if (opr == "Minus"){
+	cout<<"mul"<<type<<"(-1, "<<regName2<<")"<<endl;                // RHS = -RHS
+	cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + -RHS
+      }
+      else if (opr == "Mult"){
+	cout<<"mul"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else if (opr == "Div"){
+	cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else {
+	cout<<"Operation not supported"<<endl;
+      }
+
+      regStack.push(top2);
+      swapTopReg(regStack); // top1 contanis the evaulated expression
+    }
+    else {
+
+      // only 2 reg left, need for a store in this case
+      node2->genCode(regStack);
+
+      Register* top1 = regStack.top();
+      string regName1 = top1->getName();
+      cout<<"push"<<type<<"("<<regName1<<")"<<endl;   // store the value
+      node1->genCode(regStack);
+	  
+      swapTopReg(regStack);
+      Register* top2 = regStack.top();
+      string regName2 = top2->getName();
+      // To load the esp into regName2
+      cout<<"load"<<type<<"(ind(esp), "<<regName2<<")"<<endl;
+      cout<<"pop"<<type<<"(1)"<<endl;
+      regStack.pop();
+      top1 = regStack.top();
+      regName1 = top1->getName();
+
+      if (opr == "Plus"){
+	cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else if (opr == "Minus"){
+	cout<<"mul"<<type<<"(-1, "<<regName2<<")"<<endl;
+	cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else if (opr == "Mult"){
+	cout<<"mul"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else if (opr == "Div"){
+	cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+      }
+      else {
+	cout<<"Operation not supported"<<endl;
+      }
+
+      regStack.push(top2);   // store the reg back
+      swapTopReg(regStack);   // restore regName1 to top
+    }
+  }
+}
+
+
+// void Op::genCode(stack<Register*> &regStack){
+//   if (astnode_type->basetype == Type::Int){
+//     int dummy;
+//     string type = "i";
+//     IntConst dummy2(1);
+//     genCodeTemplate(dummy, type, regStack, dummy2);
+//   }
+//   else {
+//     float dummy;
+//     string type = "f";
+//     FloatConst dummy2(1.0);
+//     genCodeTemplate(dummy, type, regStack, dummy2);
+//   }
+  
+//   return;
+//   int countReg = regStack.size();
+//   string opr = op_value[op];
+//   /*  --------------------------------------PLUS---------------------------------------------------------- */
+
+//   if (opr == "Plus"){    
+//     /* addition is handled here */
+    
+//     if (astnode_type->basetype == Type::Int){
+//       /* handling the int plus here */
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both are constants
+// 	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
+	  
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left is constant
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  int lval = ((IntConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addi("<<lval<<","<<regName<<")"<<endl;
+// 	}
+// 	else {
+// 	  // right is constant
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  int rval = ((IntConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       // else if (lr > 0 || rr > 0){
+//       // 	// one of the exp is an identifier
+//       // 	if (lr > 0){
+//       // 	  // left exp is an identifier
+//       // 	  node2->genCode(regStack); // gen code for right, top reg has value
+//       // 	  swapTopReg(regStack);
+//       // 	  node1->genCode(regStack);  // gen loadi code from the LHS
+//       // 	  swapTopReg(regStack);
+	  
+//       // 	  // adding the top two registers
+//       // 	  Register* top1 = regStack.top();  
+//       // 	  string regName1 = top1->getName();
+//       // 	  regStack.pop();
+	  
+//       // 	  Register* top2 = regStack.top(); 
+//       // 	  string regName2 = top2->getName();
+	  
+//       // 	  regStack.push(top1);
+//       // 	  cout<<"add("<<regName1<<","<<regName2<<")"<<endl;
+
+//       // 	}
+//       // 	else {
+//       // 	  // right expression is an identifier
+//       // 	  node1->genCode(regStack); // gen code for left,top reg has value
+//       // 	  swapTopReg(regStack);
+//       // 	  node2->genCode(regStack);  // gen loadi code from the RHS
+//       // 	  swapTopReg(regStack);
+	  
+//       // 	  // adding the top two registers
+//       // 	  Register* top1 = regStack.top();  
+//       // 	  string regName1 = top1->getName();
+//       // 	  regStack.pop();
+	  
+//       // 	  Register* top2 = regStack.top(); 
+//       // 	  string regName2 = top2->getName();
+	  
+//       // 	  regStack.push(top1);
+//       // 	  cout<<"add("<<regName1<<","<<regName2<<")"<<endl;
+
+//       // 	}
+//       // }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless add possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;
+// 	  cout<<"popi(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+// 	}
+//       }
+//     }
+//     else if (astnode_type->basetype == Type::Float){
+//       /* handling the FLOAT case here */
+
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both subtree are constants
+
+// 	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
+	  
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left subtree is constant
+
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  float lval = ((FloatConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addf("<<lval<<","<<regName<<")"<<endl;
+// 	}
+// 	else {
+// 	  // right subtree is constant
+
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  float rval = ((FloatConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless add possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;
+// 	  cout<<"popf(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+	
+// 	}
+//       }
+//     }
+//     else {
+//       /* handling string here */
+//       // TODO
+//     }
+//   }
+//   /*  ----------------------------------------MINUS---------------------------------------------------------- */
+//   else if (opr == "Minus"){
+//     /* multiplication is handled here */
+    
+//     if (astnode_type->basetype == Type::Int){
+//       /* handling the int plus here */
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both are constants
+// 	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
+// 	  // the constant is negated for using add
+// 	  rval *= -1;        
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left is constant
+// 	  node2->genCode(regStack);          // gencode for right
+// 	  int lval = ((IntConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"muli(-1, "<<regName<<")"<<endl;             // negating the register value by mult with -1
+// 	  cout<<"addi("<<lval<<","<<regName<<")"<<endl;      // normal addition 
+// 	}
+// 	else {
+// 	  // right is constant
+// 	  node1->genCode(regStack);           // gencode for right
+// 	  int rval = ((IntConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  // constant is negated to use add function
+// 	  rval = -rval;
+// 	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless add possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();    // LHS
+// 	  string regName2 = top2->getName();    // RHS
+// 	  cout<<"muli(-1, "<<regName2<<")"<<endl;                // RHS = -RHS
+// 	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + (-RHS)
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"muli(-1, "<<regName1<<")"<<endl;    // RHS = -RHS
+// 	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value, -RHS
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;   // -RHS in regName2
+// 	  cout<<"popi(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + (-RHS)
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+// 	}
+//       }
+//     }
+//     else if (astnode_type->basetype == Type::Float){
+//       /* handling the FLOAT case here */
+
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both subtree are constants
+
+// 	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
+// 	  rval = -rval;                         // RHS = -RHS 
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;    // LHS + (-RHS)
+// 	}
+// 	else if (lr > 1){
+// 	  // left subtree is constant
+
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  float lval = ((FloatConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"mulf(-1, "<<regName<<")"<<endl;            // RHS = -RHS
+// 	  cout<<"addf("<<lval<<","<<regName<<")"<<endl;     // LHS + (-RHS)
+// 	}
+// 	else {
+// 	  // right subtree is constant
+
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  float rval = ((FloatConst*)node2)->getValue();
+// 	  rval = -rval;                           // RHS = -RHS
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;    // LHS = LHS +  -RHS
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless add possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"mulf(-1, "<<regName2<<")"<<endl;                      // RHS = -RHS
+// 	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;          // LHS + -RHS
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"mulf(-1, "<<regName1<<")"<<endl;          // RHS = -RHS
+// 	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value, -RHS
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;    // load -RHS
+// 	  cout<<"popf(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+	
+// 	}
+//       }
+//     }
+//   }
+//   /*  -----------------------------------------MULT---------------------------------------------------------- */
+//   else if (opr == "Mult"){
+//     /* Multiplication is handled here */
+    
+//     if (astnode_type->basetype == Type::Int){
+//       /* handling the int plus here */
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both are constants
+// 	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
+	  
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"muli("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left is constant
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  int lval = ((IntConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"muli("<<lval<<","<<regName<<")"<<endl;
+// 	}
+// 	else {
+// 	  // right is constant
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  int rval = ((IntConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"muli("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless mul possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"muli("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;
+// 	  cout<<"popi(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"muli("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+// 	}
+//       }
+//     }
+//     else if (astnode_type->basetype == Type::Float){
+//       /* handling the FLOAT case here */
+
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both subtree are constants
+
+// 	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
+	  
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"mulf("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left subtree is constant
+
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  float lval = ((FloatConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"mulf("<<lval<<","<<regName<<")"<<endl;
+// 	}
+// 	else {
+// 	  // right subtree is constant
+
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  float rval = ((FloatConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"mulf("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless mul possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"mulf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;
+// 	  cout<<"popf(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"mulf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+	
+// 	}
+//       }
+//     }
+//   }
+//   /*  -----------------------------------------DIV---------------------------------------------------------- */
+//   else if (opr == "Div"){
+//         /* addition is handled here */
+    
+//     if (astnode_type->basetype == Type::Int){
+//       /* handling the int plus here */
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both are constants
+// 	  int lval = ((IntConst*)node1)->getValue(), rval = ((IntConst*)node2)->getValue();
+	  
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left is constant
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  int lval = ((IntConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addi("<<lval<<","<<regName<<")"<<endl;
+// 	}
+// 	else {
+// 	  // right is constant
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  int rval = ((IntConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addi("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless add possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"pushi("<<regName1<<")"<<endl;   // store the value
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadi(ind(esp), "<<regName2<<")"<<endl;
+// 	  cout<<"popi(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+// 	}
+//       }
+//     }
+//     else if (astnode_type->basetype == Type::Float){
+//       /* handling the FLOAT case here */
+
+//       int lr = node1->getrType();
+//       int rr = node2->getrType();
+//       if (lr > 1 || rr > 1){
+
+// 	// Case when one of subexpression is constant
+// 	if (lr > 1 && rr > 1){
+// 	  // both subtree are constants
+
+// 	  float lval = ((FloatConst*)node1)->getValue(), rval = ((FloatConst*)node2)->getValue();
+	  
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+// 	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;
+// 	}
+// 	else if (lr > 1){
+// 	  // left subtree is constant
+
+// 	  node2->genCode(regStack);  // gencode for right
+// 	  float lval = ((FloatConst*)node1)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addf("<<lval<<","<<regName<<")"<<endl;
+// 	}
+// 	else {
+// 	  // right subtree is constant
+
+// 	  node1->genCode(regStack);  // gencode for right
+// 	  float rval = ((FloatConst*)node2)->getValue();
+// 	  Register* top = regStack.top();
+// 	  string regName = top->getName();
+// 	  cout<<"addf("<<rval<<","<<regName<<")"<<endl;
+// 	}
+//       }
+//       else {
+
+// 	/* When none of subtree is constant */
+// 	if (countReg > 2){
+
+// 	  // Storeless add possible
+// 	  swapTopReg(regStack);
+// 	  node2->genCode(regStack);  // Evaluating the right subtree
+
+// 	  Register* top2 = regStack.top();
+// 	  regStack.pop();
+// 	  node1->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  string regName2 = top2->getName();
+// 	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);
+// 	  swapTopReg(regStack); // top1 contanis the evaulated expression
+// 	}
+// 	else {
+
+// 	  // only 2 reg left, need for a store in this case
+// 	  node2->genCode(regStack);
+
+// 	  Register* top1 = regStack.top();
+// 	  string regName1 = top1->getName();
+// 	  cout<<"pushf("<<regName1<<")"<<endl;   // store the value
+// 	  node1->genCode(regStack);
+	  
+// 	  swapTopReg(regStack);
+// 	  Register* top2 = regStack.top();
+// 	  string regName2 = top2->getName();
+// 	  // To load the esp into regName2
+// 	  cout<<"loadf(ind(esp), "<<regName2<<")"<<endl;
+// 	  cout<<"popf(1)"<<endl;
+// 	  regStack.pop();
+// 	  top1 = regStack.top();
+// 	  regName1 = top1->getName();
+// 	  cout<<"addf("<<regName1<<", "<<regName2<<")"<<endl;
+// 	  regStack.push(top2);   // store the reg back
+// 	  swapTopReg(regStack);   // restore regName1 to top
+	
+// 	}
+//       }
+//     }
+
+//   }
+//   /*  -----------------------------------------ASSIGN_EXP---------------------------------------------------------- */
+//   else if (opr == "Assign_exp"){
+    
+//   }
+//   else {
+    
+//   }
+// }

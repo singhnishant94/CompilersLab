@@ -200,6 +200,9 @@ public:
   Op(ExpAst* _node1, ExpAst* _node2, OpType _op);
   void print();
   void genCode(stack<Register*> &regStack);
+
+  template<class T, class Rtype>
+  void genCodeTemplate(T d1, Rtype d2, string type, stack<Register*>&regStack, string opr);
 };
 
 class UnOp : public ExpAst {
