@@ -41,10 +41,12 @@ Type::Type(Kind kindval, Type* ptd) :
 }
 
 Type::~Type()
-{switch (tag) {
-   case Pointer: delete pointed;
-   break;
-}}
+{
+  switch (tag) {
+  case Pointer: delete pointed;
+    break;
+  }
+}
 
 void Type::printType(){ 
   switch (tag) {
@@ -712,7 +714,113 @@ void IntConst::genCode(stack<Register*> &regStack){
 }
 
 void StringConst::genCode(stack<Register*> &regStack){}
-void Index::genCode(stack<Register*> &regStack){}
+
+void Index::genCode(stack<Register*> &regStack){
+  int regCount = regStack.size();
+  int rr = node2->getrType();
+  int lr = node1->getrType();
+  
+  if (regCount > 2 || (regCount == 2 && rr > 0)){
+    /* First we calculate the left node and then right
+       in case left is not an identifier
+       following the gcc convention ,
+       The regCount = 2 case handled in this as right tree
+       is either an idenifier / constant, so needs 1 register */
+
+    if (lr == 1){
+      /* The left node is an Identifier 
+	 so we evaluate the right expression first */
+      swapTopReg(regStack);               // SWAP
+      node2->genCode(regStack);   // right exp 
+      int factor = calcSize() / dim;    // calculating the multiplicative factor
+      Register* reg2 = regStack.top();
+      string regName2 = reg->getName();
+      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      swapTopReg(regStack);               // SWAP, top restored
+
+      // obtaining the dimension in regName
+      VarRecord* rec = ((VarRecord*)node1)->getRecord();
+      int offset = rec->getOffset();
+      Register *reg = regStack.top();
+      string regName = reg->getName();
+      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
+      
+      // adding the offset to the dimension in regName
+      cout<<"addi("<<regName<<", "<<regName2<<")"<<endl;
+    }
+    else {
+      /* In this case we evaulate the LHS first */
+      node1->genCode(regStack);
+      Register* reg1 = regStack.top();
+      regStack.pop();
+      node2->genCode(regStack);
+      Register* reg2 = regStack.top();
+
+      string regName1 = reg1->getName();
+      string regName2 = reg2->getName();
+      
+      int factor = calcSize() / dim;
+      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+      regStack.push(reg1);  // restore the stack
+    }
+  }
+  else if (regCount == 2 && rr == 0){
+    /* We have only 2 registers remaining,
+       RHS needs > 1 register*/
+    
+    if (lr == 1){
+      /* The left node is an Identifier 
+	 so we evaluate the right expression first */
+      swapTopReg(regStack);               // SWAP
+      node2->genCode();   // right exp 
+      int factor = calcSize() / dim;    // calculating the multiplicative factor
+      Register* reg2 = regStack.top();
+      string regName2 = reg->getName();
+      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      swapTopReg(regStack);               // SWAP, top restored
+
+      // obtaining the dimension in regName
+      VarRecord* rec = ((VarRecord*)node1)->getRecord();
+      int offset = rec->getOffset();
+      Register *reg = regStack.top();
+      string regName = reg->getName();
+      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
+      
+      // adding the offset to the dimension in regName
+      cout<<"addi("<<regName<<", "<<regName2<<")"<<endl;
+    }
+    else {
+      /* In this case we evaulate the LHS first */
+      node1->genCode(regStack);
+      Register* reg1 = regStack.top();
+      // Saving the register value
+      string regName1 = reg1->getName();
+      cout<<"pushi("<<regName1<<")"<<endl;   // push the reg Value
+      swapTopReg(regStack);   // SWAP
+      
+      node2->genCode(regStack);
+      Register* reg2 = regStack.top();
+      string regName2 = reg2->getName();
+      swapTopReg(regStack);
+      reg1 = regStack.top();
+      regStack.pop();               // POP
+      regName1 = reg1->getName();
+      cout<<"loadi(ind(esp), "<<regNam1<<")"<<endl;   // loading pushed value from stack
+      cout<<"popi(1)"<<endl;    // restore esp stack
+
+      int factor = calcSize() / dim;
+      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+      regStack.push(reg1);  // restore the stack
+
+    }
+  }
+  else {
+    cout<<"Too low registers"<<endl;
+  }
+}
+
 void FuncallStmt::genCode(stack<Register*> &regStack){}
 
 void ToFloat::genCode(stack<Register*> &regStack){

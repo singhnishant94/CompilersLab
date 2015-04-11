@@ -118,6 +118,7 @@ public:
   void genCode(stack<Register*> &regStack);
   string getIdentifierName();
   void setRecord(GlRecord*);
+  void getRecord();
 };
 
 class BlockAst : public StmtAst {
