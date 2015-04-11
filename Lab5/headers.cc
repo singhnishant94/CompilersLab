@@ -26,6 +26,7 @@ enum UnOpType{
 
 class Type {
 public:
+  int dim;
   enum Kind {
     Base, Pointer, Error, Ok
   };
@@ -43,6 +44,8 @@ public:
   Type(Kind, Type*);   // Pointer
   ~Type();
   void printType();
+  int calcSize();
+  Basetype getBasetype();
 };
 
 
@@ -118,7 +121,7 @@ public:
   void genCode(stack<Register*> &regStack);
   string getIdentifierName();
   void setRecord(GlRecord*);
-  void getRecord();
+  GlRecord* getRecord();
 };
 
 class BlockAst : public StmtAst {
@@ -141,6 +144,8 @@ public:
   Ass(ExpAst* node1, ExpAst* node2);
   void print();
   void genCode(stack<Register*> &regStack);
+  template<class T, class R>
+  void genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type);
 };
 
 class While : public StmtAst {
@@ -276,6 +281,8 @@ public:
   void print();
   void printFold();
   void genCode(stack<Register*> &regStack);
+  void genCodeInternal(stack<Register*> &regStack);
+  void genCodeLExp(stack<Register*>&regStack);
 };
 
 

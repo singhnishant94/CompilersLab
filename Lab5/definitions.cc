@@ -34,6 +34,8 @@ Type::Type(Kind kindval) :
 
 Type::Type(Kind kindval, Basetype btype) :
   tag(kindval), basetype(btype) {
+  if (btype == Int) dim = 4;
+  else if (btype == Float) dim = 4;
 }
 
 Type::Type(Kind kindval, Type* ptd) :
@@ -63,6 +65,37 @@ void Type::printType(){
   case Pointer:std::cout << "Pointer to\n ";
     pointed->printType();
   }
+}
+
+int Type::calcSize(){
+  if (tag == Base){
+    if (basetype == Int) return 4;
+    else if (basetype == Float) return 4;
+    else if (basetype == Void) return 0;
+    else return 0;
+  }
+  else if (tag == Pointer){
+    return dim * pointed->calcSize();
+  }
+  else return 0;
+}
+
+// int Type::calcFactor(){
+//   if (tag == Base) return 1;
+//   else if (tag == Pointer){
+//     return pointed->calcSize();
+//   }
+//   else return 0;
+// }
+
+Type::Basetype Type::getBasetype(){
+  if (tag == Base){
+    return basetype;
+  }
+  else if (tag == Pointer){
+    return pointed->getBasetype();
+  }
+  else return Void; 
 }
 
 bool equal(Type *t1, Type *t2) {
@@ -118,10 +151,13 @@ Type::Basetype relBaseType(BasicVarType inp){
 
 Type* getVarType(GlType *typ){
   if (typ->type == VarType::BASIC){
-    return new Type(Type::Base, relBaseType(((BasicType*)typ)->typeName));
+    Type *t = new Type(Type::Base, relBaseType(((BasicType*)typ)->typeName));
+    return t;
   }
   else {
-    return new Type(Type::Pointer, getVarType(((ArrayType*)typ)->typeName));
+    Type* t = new Type(Type::Pointer, getVarType(((ArrayType*)typ)->typeName));
+    t->dim = ((ArrayType*)typ)->dim;
+    return t;
   }
 }
 
@@ -524,6 +560,10 @@ void Identifier :: printFold(){
   this->print();
 }
 
+GlRecord* Identifier :: getRecord(){
+  return rec;
+}
+
 Index :: Index(ArrayRef* node1, ExpAst* node2) {
   this->node1 = node1;
   this->node2 = node2;
@@ -655,8 +695,98 @@ void BlockAst::genCode(stack<Register*> &regStack){
 
 void Ass::genCode(stack<Register*> &regStack){
   if (node1 != 0 && node2 != 0){
-    node1->genCode(regStack);
-    node2->genCode(regStack);
+    Type* t = node1->getType();
+    if (t->tag == Type::Base){
+      if (t->basetype == Type::Int){
+	int d1; IntConst d2(1);
+	genCodeTemplate(d1, d2, regStack, "i");
+      }
+      else if (t->basetype == Type::Float){
+	float d1; FloatConst d2(1.0);
+	genCodeTemplate(d1, d2, regStack, "f");
+      }
+      else {
+	// TODO, string, void
+      }
+    }
+    else {
+      // TODO pointer
+    }
+  }
+}
+
+template<class T, class R>
+void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
+  int regCount = regStack.size();
+  int lr = node1->getrType();
+  int rr = node2->getrType();
+  if (lr == 1){
+    /* The case when identifier on LHS */
+    if (rr == 2){
+      /* RHS is a constant */
+      T val = ((R*)node2)->getValue();
+      VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
+      int offset = rec->offset;
+      cout<<"store"<<type<<"("<<val<<", ind(ebp, "<<offset<<"))"<<endl;
+    }
+    else {
+      /* RHS is exp, calculated in Reg */
+      node2->genCode(regStack);
+      Register *reg = regStack.top();
+      string regName = reg->getName();
+      VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
+      int offset = rec->offset;
+      cout<<"store"<<type<<"("<<regName<<", ind(ebp, "<<offset<<"))"<<endl;
+    }
+  }
+  else {
+    /* case when array on LHS */
+
+    if (rr == 2){
+      /* RHS is a constant */
+      T val = ((R*)node2)->getValue();
+      ((Index*)node1)->genCodeLExp(regStack);
+      Register* reg = regStack.top(); // reg contains the address which would be dereferenced
+      string regName = reg->getName();
+      cout<<"store"<<type<<"("<<val<<", ind("<<regName<<"))"<<endl;
+    }
+    else {
+      /* RHS is exp, calculated in Reg */
+      node2->genCode(regStack);
+      Register *reg1 = regStack.top();
+      string regName1 = reg1->getName();
+      
+      if (regCount == 2){
+	/* Need to store the result calculated in this case */
+	cout<<"push"<<type<<"("<<regName1<<")"<<endl;
+	swapTopReg(regStack);             // SWAP
+	((Index*)node1)->genCodeLExp(regStack);
+	swapTopReg(regStack);             // SWAP
+	reg1 = regStack.top();
+	regName1 = reg1->getName();
+	regStack.pop();                 // POP
+	cout<<"load"<<type<<"(ind(esp), "<<regName1<<")"<<endl;
+	cout<<"pop"<<type<<"(1)"<<endl;
+
+	Register* reg2 = regStack.top();
+	string regName2 = reg2->getName();
+	
+	// reg2 has the addr, reg1 has the value
+	cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	regStack.push(reg1);              // PUSH
+      }
+      else {
+	/* Store not needed as sufficent registers */
+	regStack.pop();                 // POP
+	((Index*)node1)->genCodeLExp(regStack);
+	Register* reg2 = regStack.top();
+	string regName2 = reg2->getName();
+	
+	// reg2 has the addr, reg1 has the value
+	cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	regStack.push(reg1);            // PUSH
+      }
+    }
   }
 }
 
@@ -711,11 +841,46 @@ void IntConst::genCode(stack<Register*> &regStack){
   string regName = top->getName();
   int val = getValue();
   cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
+  
 }
 
 void StringConst::genCode(stack<Register*> &regStack){}
 
+
+/* This special function is to generate the code 
+   needed for Index when this is used as lexpression */
+
+void Index::genCodeLExp(stack<Register*> &regStack){
+  int regCount = regStack.size();
+  genCodeInternal(regStack);
+  Register* reg = regStack.top();
+  string regName = reg->getName();
+  cout<<"addi("<<regName<<", ebs)"<<endl;
+}
+
+
 void Index::genCode(stack<Register*> &regStack){
+  int regCount = regStack.size();
+  genCodeInternal(regStack);
+  Register* reg = regStack.top();
+  string regName = reg->getName();
+  cout<<"addi("<<regName<<", ebs)"<<endl;
+  if (astnode_type->getBasetype() == Type::Int){
+    cout<<"loadi(ind("<<regName<<"), "<<regName<<")"<<endl;
+  }
+  else if (astnode_type->getBasetype() == Type::Int){
+    cout<<"loadf(ind("<<regName<<"), "<<regName<<")"<<endl;
+  }
+  else {
+    // TODO, unknown
+  }
+}
+
+
+/* Special Internal function,
+   helps to generate array codes in gcc convention */
+
+void Index::genCodeInternal(stack<Register*> &regStack){
   int regCount = regStack.size();
   int rr = node2->getrType();
   int lr = node1->getrType();
@@ -732,15 +897,15 @@ void Index::genCode(stack<Register*> &regStack){
 	 so we evaluate the right expression first */
       swapTopReg(regStack);               // SWAP
       node2->genCode(regStack);   // right exp 
-      int factor = calcSize() / dim;    // calculating the multiplicative factor
+      int factor = astnode_type->calcSize();
       Register* reg2 = regStack.top();
-      string regName2 = reg->getName();
+      string regName2 = reg2->getName();
       cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       swapTopReg(regStack);               // SWAP, top restored
 
       // obtaining the dimension in regName
-      VarRecord* rec = ((VarRecord*)node1)->getRecord();
-      int offset = rec->getOffset();
+      VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
+      int offset = rec->offset;
       Register *reg = regStack.top();
       string regName = reg->getName();
       cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
@@ -750,7 +915,7 @@ void Index::genCode(stack<Register*> &regStack){
     }
     else {
       /* In this case we evaulate the LHS first */
-      node1->genCode(regStack);
+      ((Index*)node1)->genCodeInternal(regStack);
       Register* reg1 = regStack.top();
       regStack.pop();
       node2->genCode(regStack);
@@ -759,7 +924,7 @@ void Index::genCode(stack<Register*> &regStack){
       string regName1 = reg1->getName();
       string regName2 = reg2->getName();
       
-      int factor = calcSize() / dim;
+      int factor = astnode_type->calcSize();
       cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
       regStack.push(reg1);  // restore the stack
@@ -773,16 +938,16 @@ void Index::genCode(stack<Register*> &regStack){
       /* The left node is an Identifier 
 	 so we evaluate the right expression first */
       swapTopReg(regStack);               // SWAP
-      node2->genCode();   // right exp 
-      int factor = calcSize() / dim;    // calculating the multiplicative factor
+      node2->genCode(regStack);   // right exp 
+      int factor = astnode_type->calcSize();
       Register* reg2 = regStack.top();
-      string regName2 = reg->getName();
+      string regName2 = reg2->getName();
       cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       swapTopReg(regStack);               // SWAP, top restored
 
       // obtaining the dimension in regName
-      VarRecord* rec = ((VarRecord*)node1)->getRecord();
-      int offset = rec->getOffset();
+      VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
+      int offset = rec->offset;
       Register *reg = regStack.top();
       string regName = reg->getName();
       cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
@@ -792,7 +957,7 @@ void Index::genCode(stack<Register*> &regStack){
     }
     else {
       /* In this case we evaulate the LHS first */
-      node1->genCode(regStack);
+      ((Index*)node1)->genCodeInternal(regStack);
       Register* reg1 = regStack.top();
       // Saving the register value
       string regName1 = reg1->getName();
@@ -806,10 +971,10 @@ void Index::genCode(stack<Register*> &regStack){
       reg1 = regStack.top();
       regStack.pop();               // POP
       regName1 = reg1->getName();
-      cout<<"loadi(ind(esp), "<<regNam1<<")"<<endl;   // loading pushed value from stack
+      cout<<"loadi(ind(esp), "<<regName1<<")"<<endl;   // loading pushed value from stack
       cout<<"popi(1)"<<endl;    // restore esp stack
 
-      int factor = calcSize() / dim;
+      int factor = astnode_type->calcSize();
       cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
       regStack.push(reg1);  // restore the stack
