@@ -24,6 +24,50 @@ string unop_value[] = {"Minus",
 
 };
 
+string fallInstr(string op){
+  if (op == "LT")
+    return "jge";
+  else if (op == "GT")
+    return "jle";
+  else if (op == "GE_OP")
+    return "jl";
+  else if (op == "LE_OP")
+    return "jg";
+  else if (op == "EQ_OP")
+    return "jne";
+  else if (op == "NE_OP")
+    return "je";
+  else return "j";
+}
+
+
+string notFallInstr(string op){
+  if (op == "LT")
+    return "jl";
+  else if (op == "GT")
+    return "jg";
+  else if (op == "GE_OP")
+    return "jge";
+  else if (op == "LE_OP")
+    return "jle";
+  else if (op == "EQ_OP")
+    return "je";
+  else if (op == "NE_OP")
+    return "jne";
+  else return "j";
+}
+
+//global array of code
+vector<Code*> codeStack;
+
+int nextInstr(){
+  return codeStack.size();
+}
+
+Code* getInstr(int index){
+  return codeStack[index];
+}
+
 template<class T>
 int isLexp(T* obj){
   if (dynamic_cast<const Identifier*>(obj) || dynamic_cast<const Identifier*>(obj)) return 1;
@@ -724,7 +768,22 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
 void While::genCode(stack<Register*> &regStack){}
 void For::genCode(stack<Register*> &regStack){}
 void Return::genCode(stack<Register*> &regStack){}
-void If::genCode(stack<Register*> &regStack){}
+
+void If::genCode(stack<Register*> &regStack){
+  node1->fall = 1;               // expression.fall = 1
+  node1->genCode(regStack);      
+  //int node2Start = nextInstr();
+  node2->genCode(regStack);
+  //Code* code = new Code(1, "jl", "");
+  //codeStack.push_back(code);
+  //nextList->add(code);
+  //int node3Start = nextInstr();
+  node3->genCode(regStack);
+  //(node1->trueList)->backPatch(getInstr(node2Start));
+  //(node1->falseList)->backPatch(getInstr(node3Start));
+  //nextList->merge(node2->nextList);
+  //nextList->merge(node3->nextList);
+}
 
 void Op::genCode(stack<Register*> &regStack){
   int countReg = regStack.size();
@@ -733,14 +792,15 @@ void Op::genCode(stack<Register*> &regStack){
   if (opr == "Plus" && astnode_type->basetype == Type::String){
     // TODO for strings
   }
-  else if (opr == "Plus" || opr == "Minus" || opr == "Mult" || opr == "Div" || opr == "Assign_exp"){
-    if (astnode_type->basetype == Type::Int){
+  else if (opr == "Plus" || opr == "Minus" || opr == "Mult" || opr == "Div" || opr == "Assign_exp" || opr == "LT" || opr == "GT" || opr == "LE_OP" || opr == "GE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+    Type* t = node1->getType();
+    if (t->basetype == Type::Int){
       int d1;
       IntConst d2(1);
       string type = "i";
       genCodeTemplate(d1, d2, type, regStack, opr);
     }
-    else if (astnode_type->basetype == Type::Float){
+    else if (t->basetype == Type::Float){
       float d1;
       FloatConst d2(1.0);
       string type = "f";
@@ -750,9 +810,8 @@ void Op::genCode(stack<Register*> &regStack){
       // TODO
       cout<<"Type not supported"<<endl;
     }
-  }
-  else {
-    // TODO for other cases
+  }  
+  else{//TODO
   }
 }
 
@@ -997,7 +1056,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
   int countReg = regStack.size();
   int lr = node1->getrType();
   int rr = node2->getrType();
-  if (opr == "Plus" || opr == "Minus" || opr == "Div" || opr == "Mult"){
+  if (opr == "Plus" || opr == "Minus" || opr == "Div" || opr == "Mult" || opr == "LT" || opr == "GT" || opr == "LE_OP" || opr == "GE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
     if (lr > 1 || rr > 1){
 
       // Case when one of subexpression is constant
@@ -1023,6 +1082,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	else if (opr == "Div"){
 	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
 	  cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;   // LHS div RHS
+	}
+	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  if (fall){
+	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	  }
+	  else{
+	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	  }
 	}
 	else {
 	  cout<<"Not suppored for this operator"<<endl;
@@ -1050,6 +1119,15 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	else if (opr == "Div"){
 	  cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
+	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+     	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  if (fall){
+	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	  }
+	  else{
+	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	  }
+	}
 	else {
 	  cout<<"operation not supported"<<endl;
 	}
@@ -1057,7 +1135,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
       }
       else {
 	// right is constant
-	node1->genCode(regStack);  // gencode for right
+	node1->genCode(regStack);  // gencode for left
 	T rval = ((Rtype*)node2)->getValue();
 	Register* top = regStack.top();
 	string regName = top->getName();
@@ -1079,6 +1157,21 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  string regName2 = top2->getName();
 	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
 	  cout<<"div"<<type<<"("<<regName<<", "<<regName2<<")"<<endl;  // LHS div RHS
+	  regStack.push(top);                                          // restore the pop
+	}
+	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+	  /* Need to load RHS into register */
+	  regStack.pop();
+	  Register* top2 = regStack.top();
+	  string regName2 = top2->getName();
+	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
+	  cout<<"cmp"<<type<<"("<<regName<<","<<regName2<<")"<<endl;
+	  if (fall){
+	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	  }
+	  else{
+	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	  }
 	  regStack.push(top);                                          // restore the pop
 	}
 	else {
@@ -1116,6 +1209,15 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	}
 	else if (opr == "Div"){
 	  cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	}
+	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
+	  if (fall){
+	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	  }
+	  else{
+	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	  }
 	}
 	else {
 	  cout<<"Operation not supported"<<endl;
@@ -1156,6 +1258,15 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	}
 	else if (opr == "Div"){
 	  cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	}
+	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
+	  if (fall){
+	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	  }
+	  else{
+	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	  }
 	}
 	else {
 	  cout<<"Operation not supported"<<endl;
