@@ -70,6 +70,25 @@ string toString(T arg){
 //global array of code
 vector<Code*> codeStack;
 
+/* Function to print the entire code stack */
+
+void printCodeStack(){
+  int l = codeStack.size();
+  for(int i = 0; i < l; i++){
+    codeStack[i]->print();
+  }
+}
+
+/* reset the code Stack to empty */
+
+void resetCodeStack(){
+  int l = codeStack.size();
+  for (int i = 0; i < l; i++){
+    delete codeStack[i];
+  }
+  codeStack.clear();
+}
+
 int nextInstr(){
   return codeStack.size();
 }
@@ -1034,7 +1053,8 @@ void Index::genCodeLExp(stack<Register*> &regStack){
   genCodeInternal(regStack);
   Register* reg = regStack.top();
   string regName = reg->getName();
-  cout<<"addi("<<regName<<", ebs)"<<endl;
+  codeStack.push_back(new Instr("addi", regName, "ebs"));
+  //  cout<<"addi("<<regName<<", ebs)"<<endl;
 }
 
 
@@ -1110,7 +1130,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       string regName2 = reg2->getName();
       
       int factor = astnode_type->calcSize();
-      codeStack.push_back(new Instr("muli", toString(fator), regName2));
+      codeStack.push_back(new Instr("muli", toString(factor), regName2));
       //      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       codeStack.push_back(new Instr("addi", regName1, regName2));
       //      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
@@ -1225,7 +1245,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	if (opr == "Plus"){
 	  codeStack.push_back(new Instr("move", toString(rval), regName));
 	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
-	  codeStack.push_back(new Instr("add" + type, toString(laval), regName));
+	  codeStack.push_back(new Instr("add" + type, toString(lval), regName));
 	  //	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Minus"){
@@ -1253,10 +1273,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, toString(lval), regName));
 	  //	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	  if (fall){
-	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	    GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    codeStack.push_back(code);
+	    falseList->add(code);
+	    //	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
 	  else{
-	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    codeStack.push_back(code);
+	    trueList->add(code);
+	    //	    cout<<notFallInstr(opr)<<"(label)"<<endl;
 	  }
 	}
 	else {
@@ -1279,7 +1305,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	else if (opr == "Minus"){
 	  codeStack.push_back(new Instr("mul" + type, "-1", regName));
 	  //	  cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;             // RHS = -RHS
-	  codeStack.push_back(new Instr("add" + type, toString(val), regName));
+	  codeStack.push_back(new Instr("add" + type, toString(lval), regName));
 	  //	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;      // LHS + -RHS
 	}
 	else if (opr == "Mult"){
@@ -1294,10 +1320,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, toString(lval), regName));
 	  //	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	  if (fall){
-	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	    GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    codeStack.push_back(code);
+	    falseList->add(code);
+	    //	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
 	  else{
-	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    codeStack.push_back(code);
+	    trueList->add(code);
+	    //	    cout<<notFallInstr(opr)<<"(label)"<<endl;
 	  }
 	}
 	else {
@@ -1346,10 +1378,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, regName, regName2));
 	  //	  cout<<"cmp"<<type<<"("<<regName<<","<<regName2<<")"<<endl;
 	  if (fall){
-	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	    GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    codeStack.push_back(code);
+	    falseList->add(code);
+	    //	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
 	  else{
-	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    codeStack.push_back(code);
+	    trueList->add(code);
+	    //	    cout<<notFallInstr(opr)<<"(label)"<<endl;
 	  }
 	  regStack.push(top);                                          // restore the pop
 	}
@@ -1398,10 +1436,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
 	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
-	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	    GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    codeStack.push_back(code);
+	    falseList->add(code);
+	    //	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
 	  else{
-	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    codeStack.push_back(code);
+	    trueList->add(code);
+	    //	    cout<<notFallInstr(opr)<<"(label)"<<endl;
 	  }
 	}
 	else {
@@ -1456,10 +1500,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
 	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
-	    cout<<fallInstr(opr)<<"(label)"<<endl; 
+	    GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    codeStack.push_back(code);
+	    falseList->add(code);
+	    //	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
 	  else{
-	    cout<<notFallInstr(opr)<<"(label)"<<endl;
+	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    codeStack.push_back(code);
+	    trueList->add(code);
+	    //	    cout<<notFallInstr(opr)<<"(label)"<<endl;
 	  }
 	}
 	else {

@@ -25,11 +25,16 @@ pre_translation_unit
 translation_unit
 	: function_definition 
 	{
-	    $$ = $1; $$->print();
+	    $$ = $1; 
+	    printCodeStack();
+	    resetCodeStack();
+	    $$->print();
 	    cout<<endl;
 	}
 	| translation_unit function_definition 
 	{
+	  printCodeStack();
+	  resetCodeStack();
 	  $2->print();
 	  cout<<endl;
 	}
