@@ -1082,7 +1082,8 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int factor = astnode_type->calcSize();
       Register* reg2 = regStack.top();
       string regName2 = reg2->getName();
-      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      //      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       swapTopReg(regStack);               // SWAP, top restored
 
       // obtaining the dimension in regName
@@ -1090,10 +1091,12 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int offset = rec->offset;
       Register *reg = regStack.top();
       string regName = reg->getName();
-      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
+      codeStack.push_back(new Instr("loadi", toString(offset), regName));
+      //      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
       
       // adding the offset to the dimension in regName
-      cout<<"addi("<<regName<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("addi", regName, regName2));
+      //      cout<<"addi("<<regName<<", "<<regName2<<")"<<endl;
     }
     else {
       /* In this case we evaulate the LHS first */
@@ -1107,8 +1110,10 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       string regName2 = reg2->getName();
       
       int factor = astnode_type->calcSize();
-      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
-      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("muli", toString(fator), regName2));
+      //      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("addi", regName1, regName2));
+      //      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
       regStack.push(reg1);  // restore the stack
     }
   }
@@ -1124,7 +1129,8 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int factor = astnode_type->calcSize();
       Register* reg2 = regStack.top();
       string regName2 = reg2->getName();
-      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      //      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
       swapTopReg(regStack);               // SWAP, top restored
 
       // obtaining the dimension in regName
@@ -1132,7 +1138,8 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int offset = rec->offset;
       Register *reg = regStack.top();
       string regName = reg->getName();
-      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
+      codeStack.push_back(new Instr("loadi", toString(offset), regName));
+      //      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
       
       // adding the offset to the dimension in regName
       cout<<"addi("<<regName<<", "<<regName2<<")"<<endl;
@@ -1143,7 +1150,8 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       Register* reg1 = regStack.top();
       // Saving the register value
       string regName1 = reg1->getName();
-      cout<<"pushi("<<regName1<<")"<<endl;   // push the reg Value
+      codeStack.push_back(new Instr("pushi", regName1));
+      //      cout<<"pushi("<<regName1<<")"<<endl;   // push the reg Value
       swapTopReg(regStack);   // SWAP
       
       node2->genCode(regStack);
@@ -1153,12 +1161,16 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       reg1 = regStack.top();
       regStack.pop();               // POP
       regName1 = reg1->getName();
-      cout<<"loadi(ind(esp), "<<regName1<<")"<<endl;   // loading pushed value from stack
-      cout<<"popi(1)"<<endl;    // restore esp stack
+      codeStack.push_back(new Instr("loadi", "ind(esp)", regName1));
+      //      cout<<"loadi(ind(esp), "<<regName1<<")"<<endl;   // loading pushed value from stack
+      codeStack.push_back(new Instr("popi", "1"));
+      //cout<<"popi(1)"<<endl;    // restore esp stack
 
       int factor = astnode_type->calcSize();
-      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
-      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      //      cout<<"muli("<<factor<<", "<<regName2<<")"<<endl;
+      codeStack.push_back(new Instr("addi", regName1, regName2));
+      //      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
       regStack.push(reg1);  // restore the stack
 
     }
@@ -1175,7 +1187,8 @@ void ToFloat::genCode(stack<Register*> &regStack){
   node1->genCode(regStack);   // constant loads itself on top Reg
   Register* top = regStack.top();
   string regName = top->getName();
-  cout<<"intTofloat("<<regName<<")"<<endl;
+  codeStack.push_back(new Instr("intToFloat", regName));
+  //  cout<<"intTofloat("<<regName<<")"<<endl;
 }
 
 void ToInt::genCode(stack<Register*> &regStack){
@@ -1183,7 +1196,8 @@ void ToInt::genCode(stack<Register*> &regStack){
   node1->genCode(regStack);   // constant loads itself on top Reg
   Register* top = regStack.top();
   string regName = top->getName();
-  cout<<"floatToint("<<regName<<")"<<endl;
+  codeStack.push_back(new Instr("floatToInt", regName));
+  //  cout<<"floatToint("<<regName<<")"<<endl;
 }
 
 
@@ -1209,25 +1223,35 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	string regName = top->getName();
       
 	if (opr == "Plus"){
-	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
-	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("move", toString(rval), regName));
+	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, toString(laval), regName));
+	  //	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Minus"){
 	  rval = -1;                                               // RHS = -RHS
-	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
-	  cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;   // LHS + -RHS
+	  codeStack.push_back(new Instr("move", toString(lval), regName));
+	  //	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, toString(rval), regName));
+	  //	  cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;   // LHS + -RHS
 	}
 	else if (opr == "Mult"){
-	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
-	  cout<<"mul"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("move", toString(rval), regName));
+	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("mul" + type, toString(lval), regName));
+	  //	  cout<<"mul"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Div"){
-	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
-	  cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;   // LHS div RHS
+	  codeStack.push_back(new Instr(toString(rval), regName));
+	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("div" + type, toString(lval), regName));
+	  //	  cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;   // LHS div RHS
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
-	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
-	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("move", toString(rval), regName));
+	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("cmp" + type, toString(lval), regName));
+	  //	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	  if (fall){
 	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
@@ -1249,20 +1273,26 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	string regName = top->getName();
 
 	if (opr == "Plus"){
-	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, toString(lval), regName));
+	  //	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Minus"){
-	  cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;             // RHS = -RHS
-	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;      // LHS + -RHS
+	  codeStack.push_back(new Instr("mul" + type, "-1", regName));
+	  //	  cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;             // RHS = -RHS
+	  codeStack.push_back(new Instr("add" + type, toString(val), regName));
+	  //	  cout<<"add"<<type<<"("<<lval<<","<<regName<<")"<<endl;      // LHS + -RHS
 	}
 	else if (opr == "Mult"){
-	  cout<<"mul"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("mul" + type, toString(lval), regName));
+	  //	  cout<<"mul"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Div"){
-	  cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("div" + type, toString(lval), regName));
+	  //	  cout<<"div"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
-     	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("cmp" + type, toString(lval), regName));
+	  //	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	  if (fall){
 	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
@@ -1283,22 +1313,27 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	string regName = top->getName();
 
 	if (opr == "Plus"){
-	  cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, toString(rval), regName));
+	  //	  cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Minus"){
 	  rval = -rval;                                               // RHS = -RHS
-	  cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;      // LHS + -RHS
+	  codeStack.push_back(new Instr("add" + type, toString(rval), regName));
+	  //	  cout<<"add"<<type<<"("<<rval<<","<<regName<<")"<<endl;      // LHS + -RHS
 	}
 	else if (opr == "Mult"){
-	  cout<<"mul"<<type<<"("<<rval<<","<<regName<<")"<<endl;
+	  codeStack.push_back(new Instr("mul" + type, toString(rval), regName));
+	  //	  cout<<"mul"<<type<<"("<<rval<<","<<regName<<")"<<endl;
 	}
 	else if (opr == "Div"){
 	  /* Need to load RHS into register */
 	  regStack.pop();
 	  Register* top2 = regStack.top();
 	  string regName2 = top2->getName();
-	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
-	  cout<<"div"<<type<<"("<<regName<<", "<<regName2<<")"<<endl;  // LHS div RHS
+	  codeStack.push_back(new Instr("move", toString(rval), regName2));
+	  //	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
+	  codeStack.push_back(new Instr("div" + type, regName, regName2));
+	  //	  cout<<"div"<<type<<"("<<regName<<", "<<regName2<<")"<<endl;  // LHS div RHS
 	  regStack.push(top);                                          // restore the pop
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
@@ -1306,8 +1341,10 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  regStack.pop();
 	  Register* top2 = regStack.top();
 	  string regName2 = top2->getName();
-	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
-	  cout<<"cmp"<<type<<"("<<regName<<","<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("move", toString(rval), regName2));
+	  //	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
+	  codeStack.push_back(new Instr("cmp" + type, regName, regName2));
+	  //	  cout<<"cmp"<<type<<"("<<regName<<","<<regName2<<")"<<endl;
 	  if (fall){
 	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
@@ -1340,20 +1377,26 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	string regName2 = top2->getName();
 
 	if (opr == "Plus"){
-	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, regName1, regName2));
+	  //	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "Minus"){
-	  cout<<"mul"<<type<<"(-1, "<<regName2<<")"<<endl;                // RHS = -RHS
-	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + -RHS
+	  codeStack.push_back(new Instr("mul" + type, "-1", regName2));
+	  //	  cout<<"mul"<<type<<"(-1, "<<regName2<<")"<<endl;                // RHS = -RHS
+	  codeStack.push_back(new Instr("add" + type, regName1, regName2));
+	  //	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;    // LHS + -RHS
 	}
 	else if (opr == "Mult"){
-	  cout<<"mul"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("mul" + type, regName1, regName2));
+	  //	  cout<<"mul"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "Div"){
-	  cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("div" + type, regName1, regName2));
+	  //	  cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
-	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
+	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
 	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
@@ -1375,34 +1418,43 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 
 	Register* top1 = regStack.top();
 	string regName1 = top1->getName();
-	cout<<"push"<<type<<"("<<regName1<<")"<<endl;   // store the value
+	codeStack.push_back(new Instr("push" + type, regName1));
+	//	cout<<"push"<<type<<"("<<regName1<<")"<<endl;   // store the value
 	node1->genCode(regStack);
 	  
 	swapTopReg(regStack);
 	Register* top2 = regStack.top();
 	string regName2 = top2->getName();
 	// To load the esp into regName2
-	cout<<"load"<<type<<"(ind(esp), "<<regName2<<")"<<endl;
-	cout<<"pop"<<type<<"(1)"<<endl;
+	codeStack.push_back(new Instr("load" + type, "ind(esp)", regName2));
+	//	cout<<"load"<<type<<"(ind(esp), "<<regName2<<")"<<endl;
+	codeStack.push_back(new Instr("pop", "1"));
+	//	cout<<"pop"<<type<<"(1)"<<endl;
 	regStack.pop();
 	top1 = regStack.top();
 	regName1 = top1->getName();
 
 	if (opr == "Plus"){
-	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, regName1, regName2));
+	  //	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "Minus"){
-	  cout<<"mul"<<type<<"(-1, "<<regName2<<")"<<endl;
-	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("mul" + type, "-1", regName2));
+	  //	  cout<<"mul"<<type<<"(-1, "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("add" + type, regName1, regName2));
+	  //	  cout<<"add"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "Mult"){
-	  cout<<"mul"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("mul" + type, regName1, regName2));
+	  //	  cout<<"mul"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "Div"){
-	  cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("div" + type, regName1, regName2));
+	  //	  cout<<"div"<<type<<"("<<regName1<<", "<<regName2<<")"<<endl;
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
-	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
+	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
+	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
 	    cout<<fallInstr(opr)<<"(label)"<<endl; 
 	  }
@@ -1430,8 +1482,10 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	int offset = rec->offset;
 	Register* reg = regStack.top();
 	string regName = reg->getName();
-	cout<<"load"<<type<<"("<<val<<", "<<regName<<")"<<endl;   // top reg contains the value
-	cout<<"store"<<type<<"("<<val<<", ind(ebp, "<<offset<<"))"<<endl;
+	codeStack.push_back(new Instr("move", toString(val), regName));
+	//	cout<<"move"<<"("<<val<<", "<<regName<<")"<<endl;   // top reg contains the value
+	codeStack.push_back(new Instr("store" + type, toString(val), "ind(ebp, " + toString(offset) + ")"));
+	//	cout<<"store"<<type<<"("<<val<<", ind(ebp, "<<offset<<"))"<<endl;
       }
       else {
 	/* RHS is exp, calculated in Reg */
@@ -1440,7 +1494,8 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	string regName = reg->getName();
 	VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
 	int offset = rec->offset;
-	cout<<"store"<<type<<"("<<regName<<", ind(ebp, "<<offset<<"))"<<endl;
+	codeStack.push_back(new Instr("store" + type, regName, "ind(ebp, " + toString(offset) + ")"));
+	//	cout<<"store"<<type<<"("<<regName<<", ind(ebp, "<<offset<<"))"<<endl;
       }
     }
     else {
@@ -1452,8 +1507,10 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	((Index*)node1)->genCodeLExp(regStack);
 	Register* reg = regStack.top(); // reg contains the address which would be dereferenced
 	string regName = reg->getName();
-	cout<<"store"<<type<<"("<<val<<", ind("<<regName<<"))"<<endl;
-	cout<<"load"<<type<<"("<<val<<", "<<regName<<")"<<endl;
+	codeStack.push_back(new Instr("store" + type, toString(val), "ind(" + regName + ")"));
+	//	cout<<"store"<<type<<"("<<val<<", ind("<<regName<<"))"<<endl;
+	codeStack.push_back(new Instr("move", toString(val), regName));
+	//	cout<<"move("<<val<<", "<<regName<<")"<<endl;
       }
       else {
 	/* RHS is exp, calculated in Reg */
@@ -1463,21 +1520,25 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
       
 	if (countReg == 2){
 	  /* Need to store the result calculated in this case */
-	  cout<<"push"<<type<<"("<<regName1<<")"<<endl;
+	  codeStack.push_back(new Instr("push" + type, regName1));
+	  //	  cout<<"push"<<type<<"("<<regName1<<")"<<endl;
 	  swapTopReg(regStack);             // SWAP
 	  ((Index*)node1)->genCodeLExp(regStack);
 	  swapTopReg(regStack);             // SWAP
 	  reg1 = regStack.top();
 	  regName1 = reg1->getName();
 	  regStack.pop();                 // POP
-	  cout<<"load"<<type<<"(ind(esp), "<<regName1<<")"<<endl;
-	  cout<<"pop"<<type<<"(1)"<<endl;
+	  codeStack.push_back(new Instr("load" + type, "ind(esp)", regName1));
+	  //	  cout<<"load"<<type<<"(ind(esp), "<<regName1<<")"<<endl;
+	  codeStack.push_back(new Instr("pop", "1"));
+	  //	  cout<<"pop"<<type<<"(1)"<<endl;
 
 	  Register* reg2 = regStack.top();
 	  string regName2 = reg2->getName();
 	
 	  // reg2 has the addr, reg1 has the value
-	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
+	  //	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	  regStack.push(reg1);              // PUSH
 	}
 	else {
@@ -1488,7 +1549,8 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  string regName2 = reg2->getName();
 	
 	  // reg2 has the addr, reg1 has the value
-	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	  codeStack.push_back(new Instr("store" + type, regName2, "ind(" + regName2 + ")"));
+	  //	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	  regStack.push(reg1);            // PUSH
 	}
       }
