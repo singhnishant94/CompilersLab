@@ -918,8 +918,37 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
   }
 }
 
-void While::genCode(stack<Register*> &regStack){}
-void For::genCode(stack<Register*> &regStack){}
+void While::genCode(stack<Register*> &regStack){
+  node1->fall = 1;
+  int node1Start = nextInstr();
+  node1->genCode(regStack);
+  int node2Start = nextInstr();
+  node2->genCode(regStack);
+  (node1->trueList)->backpatch(getInstr(node2Start));
+  (node2->nextList)->backpatch(getInstr(node1Start));
+  nextList = node1->falseList;
+  GotoInstr* code = new GotoInstr("jl");
+  codeStack.push_back(code);
+  code->backpatch(getInstr(node1Start));
+}
+
+void For::genCode(stack<Register*> &regStack){
+  node2->fall = 1;
+  node1->genCode(regStack);
+  int node2Start = nextInstr();
+  node2->genCode(regStack);
+  int node4Start = nextInstr();
+  node4->genCode(regStack);
+  int node3Start = nextInstr();
+  node3->genCode(regStack);
+  GotoInstr* code2 = new GotoInstr("jl");
+  codeStack.push_back(code2);
+  (node2->trueList)->backpatch(getInstr(node4Start));
+  (node4->nextList)->backpatch(getInstr(node3Start));
+  code2->backpatch(getInstr(node2Start));
+  nextList = node2->falseList;
+}
+
 void Return::genCode(stack<Register*> &regStack){}
 
 void If::genCode(stack<Register*> &regStack){
