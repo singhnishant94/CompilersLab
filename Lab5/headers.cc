@@ -211,6 +211,7 @@ public:
   void genCodeTemplate(T d1, Rtype d2, string type, stack<Register*>&regStack, string opr);
 };
 
+
 class UnOp : public ExpAst {
 protected:
   ExpAst* node1;
@@ -222,7 +223,11 @@ public:
   void print();
   void setExp(ExpAst* node1);
   void genCode(stack<Register*> &regStack);
+
+  template<class T, class R>
+  void genCode(T d1, R d2, stack<Register*> &regStack, string type);
 };
+
 
 class Funcall : public ExpAst {
 protected:

@@ -583,13 +583,17 @@ postfix_expression
 	| l_expression INC_OP
 	{
 	  Type* t = $1->getType();
+	  if (!isLexp($1)){
+	    cout<<"Lexp required for ++, Line No. "<<lineNo<<endl; exit(0);
+	  }
 	  $$ = new UnOp($1, UnOpType::PP);
 	  
 	  
-	    if (t->tag != Type::Error && t->basetype == Type::Int){
-		$$->setType(t);
-	    }
+	  if (t->tag != Type::Error && (t->basetype == Type::Int || t->basetype == Type::Float)){
+	    $$->setType(t);
+	  }
 	    else{
+	      cout<<"Error type for ++, Line no. "<<lineNo<<endl; exit(0);
 		$$->setType(new Type(Type::Error));
 	    }
 		

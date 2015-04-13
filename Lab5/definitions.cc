@@ -24,6 +24,19 @@ string unop_value[] = {"Minus",
 
 };
 
+template<class T>
+int isLexp(T* obj){
+  if (dynamic_cast<const Identifier*>(obj) || dynamic_cast<const Identifier*>(obj)) return 1;
+  else return 0;
+}
+
+/* To check if src is of type dst */
+
+template<class S, class R>
+int isType(S* src, R *dst){
+  if (dynamic_cast<const R*>(src)) return 1;
+  else return 0;
+}
 
 Type::Type() :
   tag(Ok) {
@@ -305,6 +318,7 @@ Op :: Op(ExpAst* _node1, ExpAst* _node2, OpType _op) {
   op = _op;
   rType = 0;
   
+  
   string opr = op_value[op];
   if (opr == "Assign_exp"){
     Type* t1 = node1->getType();
@@ -352,10 +366,12 @@ UnOp :: UnOp(ExpAst* node1, UnOpType _op) {
   this->node1 = node1;
   op = _op;
   rType = 0;
+  
 }
 
 UnOp :: UnOp(UnOpType _op){
   op = _op;
+  
 }
 
 
@@ -367,10 +383,12 @@ void UnOp :: print(){
 
 void UnOp::setExp(ExpAst* node1){
   this->node1 = node1;
+  // check for lexp here for PP
 }
 
 Funcall :: Funcall() {
   rType = 0;
+  
 }
 
 void Funcall :: print(){
@@ -397,6 +415,7 @@ void Funcall :: addExp(ExpAst* exp){
 FloatConst :: FloatConst(float _val) {
   val = _val;
   rType = 2;
+  
 }
 
 void FloatConst :: print(){
@@ -410,6 +429,7 @@ float FloatConst :: getValue(){
 IntConst :: IntConst(int _val) {
   val = _val;
   rType = 2;
+  
 }
 
 int IntConst :: getValue(){
@@ -423,6 +443,7 @@ void IntConst :: print(){
 StringConst :: StringConst(string _val) {
   val = _val;
   rType = 2;
+  
 }
 
 string StringConst :: getValue(){
@@ -441,6 +462,7 @@ Identifier :: Identifier(string _val) {
   val = _val;
   rType = 1;
   rec = 0;
+  
 }
 
 void Identifier::setRecord(GlRecord* _rec){
@@ -463,6 +485,7 @@ Index :: Index(ArrayRef* node1, ExpAst* node2) {
   this->node1 = node1;
   this->node2 = node2;
   rType = 0;
+  
 }
 
 void Index :: print(){
@@ -499,6 +522,7 @@ ToFloat::ToFloat(ExpAst* node1){
   }
   
   rType = 0;
+  
 }
 
 void ToFloat::print(){
@@ -519,6 +543,7 @@ ToInt::ToInt(ExpAst* node1){
   }
 
   rType = 0;
+  
 }
 
 void ToInt::print(){
@@ -720,7 +745,56 @@ void Op::genCode(stack<Register*> &regStack){
   }
 }
 
-void UnOp::genCode(stack<Register*> &regStack){}
+void UnOp::genCode(stack<Register*> &regStack){
+  if (op == UnOpType::NOT){
+    // TODO
+  }
+  else if (op == UnOpType::UMINUS || op == UnOpType::PP){
+    if (astnode_type->basetype == Type::Int){
+      int d1; IntConst d2(1); string type = "i";
+      genCode(d1, d2, regStack, type);
+    }
+    else if (astnode_type->basetype == Type::Float){
+      float d1; FloatConst d2(1); string type = "f";
+      genCode(d1, d2, regStack, type);
+    }
+    else {
+      cout<<"Unkown Type :: ";
+      astnode_type->printType();
+    }
+  }
+  else {
+    cout<<"Error Operator"<<endl;
+  }
+}
+
+/* Template genCode supporting the code generation 
+   for Int, Float class Types , operators = ++, - */
+
+template<class T, class R>
+void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
+  if (isType(node1, &d2)){   // checks for constants , R is IntConst / Float Const
+    if (op == UnOpType::UMINUS){
+      T val = ((R*)node1)->getValue();
+      val = -val;
+      Register* reg = regStack.top();
+      string regName = reg->getName();
+      cout<<"load"<<type<<"("<<regName<<", "<<val<<")"<<endl;
+    }
+  }
+  else {
+    node1->genCode(regStack);
+    Register* reg = regStack.top();
+    string regName = reg->getName();
+    if (op == UnOpType::UMINUS){
+      cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;
+    }
+    else if (op == UnOpType::PP){
+      cout<<"add"<<type<<"(1, "<<regName<<")"<<endl;
+    }
+  }
+}
+
 void Funcall::genCode(stack<Register*> &regStack){}
 
 void FloatConst::genCode(stack<Register*> &regStack){
