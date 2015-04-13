@@ -768,7 +768,7 @@ unary_operator
 	;
 
 selection_statement
-        : IF '(' expression ')' statement ELSE statement 
+        : IF '(' expression ')' statement ELSE  statement 
 	{
 	  Type *t3 = $3->getType();
 	  Type *t5 = $5->getType();

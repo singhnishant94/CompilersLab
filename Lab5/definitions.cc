@@ -193,12 +193,23 @@ int abstract_astnode :: getrType(){
   return rType;
 }
 
+StmtAst :: StmtAst(){
+  nextList = new CList();
+}
+
 Type* StmtAst::getType(){
   return astnode_type;
 }
 
 void StmtAst::setType(Type* t){
   astnode_type = t;
+}
+
+ExpAst::ExpAst(){
+  fall = 0;
+  nextList = new CList();
+  trueList = new CList();
+  falseList = new CList();
 }
 
 Type* ExpAst::getType(){
