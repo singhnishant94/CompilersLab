@@ -337,6 +337,24 @@ void Instr :: print(){
   else   cout<<"\t"<<func<<"("<<arg1<<","<<arg2<<")"<<endl;  
 }
 
+void Instr :: backpatch(Code* code){}
+
+void CList::add(Code* code){
+  arr.push_back(code);
+}
+
+void CList::backpatch(Code* code){
+  for (int i = 0; i < arr.size(); i++){
+    arr[i]->backpatch(code);
+  }
+}
+
+void CList::merge(CList* clist){
+  for (int i = 0; i < (clist->arr).size(); i++){
+    arr.push_back(clist->arr[i]);
+  }
+}
+
 /* Definitions for the AST's */
 
 int abstract_astnode :: getrType(){
@@ -746,7 +764,8 @@ void Identifier::genCode(stack<Register*> &regStack){
     string regName = top->getName();
     int offset = rec->offset;
     //    cout<<"loadi(ind(ebp, "<<offset<<"), "<<regName<<")"<<endl;
-    cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
+    codeStack.push_back(new Instr("loadi", toString(val), regName));
+    //cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
   }
   else if (astnode_type->basetype == Type::Float){
     /* variable is of type Float */
@@ -754,7 +773,8 @@ void Identifier::genCode(stack<Register*> &regStack){
     string regName = top->getName();
     int offset = rec->offset;
     //    cout<<"loadf(ind(ebp, "<<offset<<"), "<<regName<<")"<<endl;
-    cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
+    codeStack.push_back(new Instr("loadf", toString(val), regName));  
+    //cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
   }
   else if (astnode_type->basetype == Type::String){
     /* variable is of type string */
@@ -808,7 +828,8 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
       T val = ((R*)node2)->getValue();
       VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
       int offset = rec->offset;
-      cout<<"store"<<type<<"("<<val<<", ind(ebp, "<<offset<<"))"<<endl;
+      codeStack.push_back(new Instr("store" + type, toString(val), "ind(ebp, " + toString(offset) + ")"));
+      //cout<<"store"<<type<<"("<<val<<", ind(ebp, "<<offset<<"))"<<endl;
     }
     else {
       /* RHS is exp, calculated in Reg */
@@ -817,7 +838,8 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
       string regName = reg->getName();
       VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
       int offset = rec->offset;
-      cout<<"store"<<type<<"("<<regName<<", ind(ebp, "<<offset<<"))"<<endl;
+      codeStack.push_back(new Instr("store" + type, regName, "ind(ebp, " + toString(offset) + ")"));
+      //cout<<"store"<<type<<"("<<regName<<", ind(ebp, "<<offset<<"))"<<endl;
     }
   }
   else {
@@ -829,7 +851,8 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
       ((Index*)node1)->genCodeLExp(regStack);
       Register* reg = regStack.top(); // reg contains the address which would be dereferenced
       string regName = reg->getName();
-      cout<<"store"<<type<<"("<<val<<", ind("<<regName<<"))"<<endl;
+      codeStack.push_back(new Instr("store" + type, toString(val), "ind(" + regName + ")"));
+      //cout<<"store"<<type<<"("<<val<<", ind("<<regName<<"))"<<endl;
     }
     else {
       /* RHS is exp, calculated in Reg */
@@ -839,21 +862,25 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
       
       if (regCount == 2){
 	/* Need to store the result calculated in this case */
-	cout<<"push"<<type<<"("<<regName1<<")"<<endl;
+	codeStack.push_back(new Instr("push" + type, regName1));
+	//cout<<"push"<<type<<"("<<regName1<<")"<<endl;
 	swapTopReg(regStack);             // SWAP
 	((Index*)node1)->genCodeLExp(regStack);
 	swapTopReg(regStack);             // SWAP
 	reg1 = regStack.top();
 	regName1 = reg1->getName();
 	regStack.pop();                 // POP
-	cout<<"load"<<type<<"(ind(esp), "<<regName1<<")"<<endl;
-	cout<<"pop"<<type<<"(1)"<<endl;
+	codeStack.push_back(new Instr("load" + type, "ind(esp) ", regName1));
+	//cout<<"load"<<type<<"(ind(esp), "<<regName1<<")"<<endl;
+	codeStack.push_back(new Instr("pop" + type, "1"));
+	//cout<<"pop"<<type<<"(1)"<<endl;
 
 	Register* reg2 = regStack.top();
 	string regName2 = reg2->getName();
 	
 	// reg2 has the addr, reg1 has the value
-	cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
+	//cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	regStack.push(reg1);              // PUSH
       }
       else {
@@ -864,7 +891,8 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
 	string regName2 = reg2->getName();
 	
 	// reg2 has the addr, reg1 has the value
-	cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
+	//cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	regStack.push(reg1);            // PUSH
       }
     }
@@ -878,17 +906,17 @@ void Return::genCode(stack<Register*> &regStack){}
 void If::genCode(stack<Register*> &regStack){
   node1->fall = 1;               // expression.fall = 1
   node1->genCode(regStack);      
-  //int node2Start = nextInstr();
+  int node2Start = nextInstr();
   node2->genCode(regStack);
-  //Code* code = new Code(1, "jl", "");
-  //codeStack.push_back(code);
-  //nextList->add(code);
-  //int node3Start = nextInstr();
+  GotoInstr* code = new GotoInstr("jl");
+  codeStack.push_back(code);
+  nextList->add(code);
+  int node3Start = nextInstr();
   node3->genCode(regStack);
-  //(node1->trueList)->backPatch(getInstr(node2Start));
-  //(node1->falseList)->backPatch(getInstr(node3Start));
-  //nextList->merge(node2->nextList);
-  //nextList->merge(node3->nextList);
+  (node1->trueList)->backpatch(getInstr(node2Start));
+  (node1->falseList)->backpatch(getInstr(node3Start));
+  nextList->merge(node2->nextList);
+  nextList->merge(node3->nextList);
 }
 
 void Op::genCode(stack<Register*> &regStack){
@@ -955,7 +983,8 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
       val = -val;
       Register* reg = regStack.top();
       string regName = reg->getName();
-      cout<<"load"<<type<<"("<<regName<<", "<<val<<")"<<endl;
+      codeStack.push_back(new Instr("load" + type, regName, toString(val)));
+      //cout<<"load"<<type<<"("<<regName<<", "<<val<<")"<<endl;
     }
   }
   else {
@@ -963,10 +992,12 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
     Register* reg = regStack.top();
     string regName = reg->getName();
     if (op == UnOpType::UMINUS){
-      cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;
+      codeStack.push_back(new Instr("mul" + type, "-1", regName));
+      //cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;
     }
     else if (op == UnOpType::PP){
-      cout<<"add"<<type<<"(1, "<<regName<<")"<<endl;
+      codeStack.push_back(new Instr("add" + type, "1", regName));
+      //cout<<"add"<<type<<"(1, "<<regName<<")"<<endl;
     }
   }
 }
@@ -978,7 +1009,8 @@ void FloatConst::genCode(stack<Register*> &regStack){
   Register *top = regStack.top();
   string regName = top->getName();
   float val = getValue();
-  cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
+  codeStack.push_back(new Instr("loadf", toString(val), regName));
+  //cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
 }
 
 void IntConst::genCode(stack<Register*> &regStack){
@@ -986,7 +1018,8 @@ void IntConst::genCode(stack<Register*> &regStack){
   Register *top = regStack.top();
   string regName = top->getName();
   int val = getValue();
-  cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
+  codeStack.push_back(new Instr("loadi", toString(val), regName));
+  //cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
   
 }
 
@@ -1010,12 +1043,15 @@ void Index::genCode(stack<Register*> &regStack){
   genCodeInternal(regStack);
   Register* reg = regStack.top();
   string regName = reg->getName();
-  cout<<"addi("<<regName<<", ebs)"<<endl;
+  codeStack.push_back(new Instr("addi", regName, "ebs"));
+  //cout<<"addi("<<regName<<", ebs)"<<endl;
   if (astnode_type->getBasetype() == Type::Int){
-    cout<<"loadi(ind("<<regName<<"), "<<regName<<")"<<endl;
+    codeStack.push_back(new Instr("loadi", "ind(" + regName + ")", regName));
+    //cout<<"loadi(ind("<<regName<<"), "<<regName<<")"<<endl;
   }
   else if (astnode_type->getBasetype() == Type::Int){
-    cout<<"loadf(ind("<<regName<<"), "<<regName<<")"<<endl;
+    codeStack.push_back(new Instr("loadf", "ind(" + regName + ")", regName));
+    //cout<<"loadf(ind("<<regName<<"), "<<regName<<")"<<endl;
   }
   else {
     // TODO, unknown

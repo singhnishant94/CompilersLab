@@ -86,7 +86,7 @@ public:
   int isGoto;
   
   /* backpatch the goto with another Code */
-  virtual void backPatch(Code*) = 0;
+  virtual void backpatch(Code*) = 0;
   
   /* set label from a list of global labels */
   virtual void setLabel() = 0;
@@ -141,7 +141,10 @@ public:
   void add(Code*);
   
   /* backPatch the arr with sprecified Code line */
-  void backPatch(Code*);
+  void backpatch(Code*);
+
+  /* merge the lists into one*/
+  void merge(CList*);
 };
 
 
