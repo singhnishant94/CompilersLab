@@ -74,6 +74,7 @@ class Code {
 public:
   /* Code representation, 
      funcall, argument1, <optional argument2> */
+
   int argCount;
   string func, arg1, arg2; 
   
@@ -84,23 +85,42 @@ public:
   /* Goto statements are special */
   int isGoto;
   
-  /* operations , int = 1 means goto type */
-  Code(int, string, string, string);
-  Code(int, string, string);
-  
   /* backpatch the goto with another Code */
-  void backPatch(Code*);
+  virtual void backPatch(Code*) = 0;
   
   /* set label from a list of global labels */
-  void setLabel();
+  virtual void setLabel() = 0;
   
   /* get current Label */
-  string getLabel();
+  virtual string getLabel() = 0;
   
   /* prints the Code accordingly */
+  virtual void print() = 0;
+};
+
+
+class GotoInstr : public Code{
+ public:
+  GotoInstr(string);
+  GotoInstr(string, string);
+  
+  void backpatch(Code*);
+  string getLabel();
+  void setLabel();
   void print();
 };
 
+
+class Instr : public Code{
+ public:
+  Instr(string, string);
+  Instr(string, string, string);
+  
+  void backpatch(Code*);
+  void setLabel();
+  string getLabel();
+  void print();
+};
 
 
 

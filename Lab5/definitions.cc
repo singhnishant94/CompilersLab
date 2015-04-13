@@ -1,5 +1,5 @@
 #include <iostream>
-//#include "headers.h"
+#include <sstream>
 using namespace std;
 
 
@@ -55,6 +55,16 @@ string notFallInstr(string op){
   else if (op == "NE_OP")
     return "jne";
   else return "j";
+}
+
+
+/* Function to convert to string from basic types */
+template<class T>
+string toString(T arg){
+  stringstream ss;
+  ss << arg;
+  string s = ss.str();
+  return s;
 }
 
 //global array of code
@@ -219,6 +229,7 @@ Type* getVarType(GlType *typ){
 }
 
 
+
 /* Deifnitions for register class */
 
 Register::Register(string _name){
@@ -230,6 +241,101 @@ string Register::getName(){
   return name;
 }
 
+
+/* Definition for the Code Class and its subclass */
+
+/* Helper Class and Global to generate new label */
+int labelCount = 0;
+
+void resetLabelCount(){
+  labelCount = 0;
+}
+
+string getNextLabel(){
+  stringstream ss;
+  ss<<labelCount;
+  labelCount++;
+  string s = ss.str();
+  return "l"+s;
+}
+
+
+GotoInstr :: GotoInstr(string _func){
+  func = _func;
+  hasLabel = 0;
+  argCount = 1;
+  isGoto = 1;
+}
+
+GotoInstr :: GotoInstr(string _func, string _arg1){
+  func = _func;
+  arg1 = _arg1;
+  hasLabel = 0;
+  argCount = 1;
+  isGoto = 1;
+}
+
+void GotoInstr :: backpatch(Code* code){
+  code->setLabel();
+  arg1 = code->getLabel();
+}
+
+void GotoInstr :: setLabel(){
+  if (!hasLabel){
+    // set the label
+    label = getNextLabel();
+    hasLabel = 1;
+  }
+}
+
+string GotoInstr :: getLabel(){
+  if (hasLabel)
+    return label;
+  else return "";
+}
+
+void GotoInstr :: print(){
+  if (hasLabel) cout<<label<<":";
+  cout<<"\t"<<func<<"("<<arg1<<")"<<endl;
+}
+
+
+Instr :: Instr(string _func, string _arg1){
+  isGoto = 0;
+  func = _func;
+  arg1 = _arg1;
+  argCount = 1;
+  hasLabel = 0;
+}
+
+Instr :: Instr(string _func, string _arg1, string _arg2){
+  func = _func;
+  arg1 = _arg1;
+  arg2 = _arg2;
+  argCount = 2;
+  hasLabel = 0;
+  isGoto = 0;
+}
+
+void Instr :: setLabel(){
+  if (!hasLabel){
+    // if has no label
+    label = getNextLabel();
+    hasLabel = 1;
+  }
+}
+
+string Instr :: getLabel(){
+  if (hasLabel) return label;
+  else return "";
+}
+
+void Instr :: print(){
+  if (hasLabel) cout<<label<<":";
+  if (argCount == 1)
+    cout<<"\t"<<func<<"("<<arg1<<")"<<endl;  
+  else   cout<<"\t"<<func<<"("<<arg1<<","<<arg2<<")"<<endl;  
+}
 
 /* Definitions for the AST's */
 
