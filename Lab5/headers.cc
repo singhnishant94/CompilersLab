@@ -115,7 +115,7 @@ class Instr : public Code{
  public:
   Instr(string, string);
   Instr(string, string, string);
-  
+  Instr();
   void backpatch(Code*);
   void setLabel();
   string getLabel();

@@ -318,6 +318,12 @@ void GotoInstr :: print(){
   cout<<"\t"<<func<<"("<<arg1<<")"<<endl;
 }
 
+Instr :: Instr(){
+  isGoto = 0;
+  func = "";
+  argCount = 0;
+  hasLabel = 0;
+}
 
 Instr :: Instr(string _func, string _arg1){
   isGoto = 0;
@@ -351,7 +357,10 @@ string Instr :: getLabel(){
 
 void Instr :: print(){
   if (hasLabel) cout<<label<<":";
-  if (argCount == 1)
+  if (argCount == 0){
+    cout<<func<<endl;
+  }
+  else if (argCount == 1)
     cout<<"\t"<<func<<"("<<arg1<<")"<<endl;  
   else   cout<<"\t"<<func<<"("<<arg1<<","<<arg2<<")"<<endl;  
 }
@@ -812,8 +821,20 @@ void Identifier::genCode(stack<Register*> &regStack){
 void BlockAst::genCode(stack<Register*> &regStack){
   /* call the gencode of the list of statements */
   int l = vec.size();
-  for (int i = 0; i < l; i++){
+  if (l > 0){
+    vec[0]->genCode(regStack);
+  }
+  
+  for (int i = 1; i < l; i++){
+    int nodeStart = nextInstr();
     vec[i]->genCode(regStack);
+    (vec[i - 1]->nextList)->backpatch(getInstr(nodeStart));
+  }
+  if ((vec[l - 1]->nextList)->arr.size() != 0){
+    int nodeStart = nextInstr();
+    Instr* emptycode = new Instr();
+    codeStack.push_back(emptycode);
+    (vec[l - 1]->nextList)->backpatch(getInstr(nodeStart));
   }
 }
 
@@ -953,7 +974,9 @@ void For::genCode(stack<Register*> &regStack){
   nextList = node2->falseList;
 }
 
-void Return::genCode(stack<Register*> &regStack){}
+void Return::genCode(stack<Register*> &regStack){
+  
+}
 
 void If::genCode(stack<Register*> &regStack){
   node1->fall = 1;               // expression.fall = 1
@@ -1026,7 +1049,10 @@ void Op::genCode(stack<Register*> &regStack){
 
 void UnOp::genCode(stack<Register*> &regStack){
   if (op == UnOpType::NOT){
-    // TODO
+    node1->fall = !fall;
+    node1->genCode(regStack);
+    trueList = node1->falseList;
+    falseList = node1->trueList;
   }
   else if (op == UnOpType::UMINUS || op == UnOpType::PP){
     if (astnode_type->basetype == Type::Int){
@@ -1227,7 +1253,9 @@ void IntConst::genCode(stack<Register*> &regStack){
   
 }
 
-void StringConst::genCode(stack<Register*> &regStack){}
+void StringConst::genCode(stack<Register*> &regStack){
+  // TODO
+}
 
 
 /* This special function is to generate the code 
@@ -1377,7 +1405,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       codeStack.push_back(new Instr("addi", regName1, regName2));
       //      cout<<"addi("<<regName1<<", "<<regName2<<")"<<endl;
       regStack.push(reg1);  // restore the stack
-
+      
     }
   }
   else {
