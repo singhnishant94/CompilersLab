@@ -101,6 +101,8 @@ ArrayType::ArrayType(){
     type = ARR;
 }
 
+
+
 int ArrayType::calcSize(){
     if (typeName->type == VarType::BASIC){
 	if (((BasicType*)typeName)->typeName == BasicVarType::INT){
@@ -115,6 +117,17 @@ int ArrayType::calcSize(){
 	return dim*(((ArrayType*)typeName)->calcSize());
     }
 }
+
+int ArrayType::calcDim(){
+  if (typeName->type == VarType::BASIC) return 1;
+  else return dim*(((ArrayType*)typeName)->calcDim());
+}
+
+BasicVarType ArrayType::getBasicVarType(){
+  if (typeName->type == VarType::BASIC) return ((BasicType*)typeName)->typeName;
+  else return (((ArrayType*)typeName)->getBasicVarType());
+}
+
 	
 GlRecord* SymTab::find(RecordType r, string n) {
     GlRecord* cur = 0;
@@ -153,3 +166,17 @@ void SymTab::print(){
     }
 }
 //int main(){return 0;}
+
+
+map<int, GlType*> SymTab::getOrderedRecords(){
+  map<string, GlRecord*>::iterator itr = entries.begin();
+  map<int, GlType*> mp;
+  for(; itr != entries.end(); itr++){
+    int offset = (itr->second)->offset;
+    if (offset < 0){
+      GlType* temp = ((VarRecord*)(itr->second))->keyType;
+      mp[-offset] = temp;
+    }
+  }
+  return mp;
+}

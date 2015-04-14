@@ -826,6 +826,33 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
     codeStack.push_back(new Instr("move", "esp", "ebp")); // setting dyn link
   }
   
+  map<int, GlType*> mp = symTab->getOrderedRecords();
+  map<int, GlType*>::iterator itr = mp.begin();
+  for(;itr != mp.end(); itr++){
+    GlType* temp = itr->second;
+    if (temp->type == VarType::BASIC){
+      string fun = "push";
+      if (((BasicType*)temp)->typeName == BasicVarType::INT) fun += "i";
+      else if (((BasicType*)temp)->typeName == BasicVarType::FLOAT) fun += "f";
+      codeStack.push_back(new Instr(fun, "0"));
+    }
+    else {
+      BasicVarType t = ((ArrayType*)temp)->getBasicVarType();
+      string fun = "push";
+      if (t == BasicVarType::INT){
+	fun += "i";
+      }
+      else if (t == BasicVarType::FLOAT){
+	fun += "f";
+      }
+      
+      int l = ((ArrayType*)temp)->calcDim();
+      for(int i = 0; i < l; i++){
+	codeStack.push_back(new Instr(fun, "0"));
+      }
+    }
+  }
+  
   node1->genCode(regStack);
   
   int nodeStart = nextInstr();

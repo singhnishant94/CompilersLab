@@ -50,10 +50,12 @@ class SymTab {
  public:
     map<string, GlRecord*> entries;
     GlRecord* find(RecordType, string); 
+    
 
     SymTab();
     void add(GlRecord*);
     void print();
+    map<int, GlType*> getOrderedRecords();
 };
 
 
@@ -97,6 +99,8 @@ class ArrayType : public GlType {
     ArrayType(GlType*);
     void print();
     int calcSize();
+    int calcDim();
+    BasicVarType getBasicVarType();
 };
 
 
