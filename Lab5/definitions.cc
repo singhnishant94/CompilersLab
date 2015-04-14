@@ -1081,7 +1081,30 @@ void Funcall::genCode(stack<Register*> &regStack){
   string func = funName->getIdentifierName();
   if (func == "printf"){
     /* special function to take care of */
-    
+    int l = vec.size(); 
+    for (int i = 0; i < l; i++){
+      Type *t = vec[i]->getType();
+      if (t->tag == Type::Base){
+	if (t->basetype == Type :: Int){
+	  int d1; IntConst d2(1);
+	  genCode(vec[i], d1, d2, regStack, "int");
+	}
+	else if (t->basetype == Type :: Float){
+	  float d1; FloatConst d2(1);
+	  genCode(vec[i], d1, d2, regStack, "float");
+	}
+	else if (t->basetype == Type :: String){
+	  string d1; StringConst d2("1");
+	  genCode(vec[i], d1, d2, regStack, "string");
+	}
+	else {
+	  // TODO voids
+	}
+      }
+      else {
+	// TODO, handling pointers
+      }
+    }
   }
   else {
     /* User defined functions */
@@ -1162,8 +1185,20 @@ void Funcall::genCode(stack<Register*> &regStack){
     }
     
   }
-  
-  
+}
+
+template<class T, class R>
+void Funcall::genCode(ExpAst* obj, T d1, R d2, stack<Register*>& regStack, string type){
+  if (isType(obj, &d2)){
+    T val = ((R*)obj)->getValue();
+    codeStack.push_back(new Instr("print_" + type, toString(val)));
+  }
+  else {
+    obj->genCode(regStack);
+    Register* reg = regStack.top();
+    string regName = reg->getName();
+    codeStack.push_back(new Instr("print_" + type, regName));
+  }
 }
 
 void FloatConst::genCode(stack<Register*> &regStack){
@@ -1343,7 +1378,9 @@ void Index::genCodeInternal(stack<Register*> &regStack){
   }
 }
 
-void FuncallStmt::genCode(stack<Register*> &regStack){}
+void FuncallStmt::genCode(stack<Register*> &regStack){
+  node1->genCode(regStack);
+}
 
 void ToFloat::genCode(stack<Register*> &regStack){
   int countReg = regStack.size();

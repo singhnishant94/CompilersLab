@@ -335,6 +335,8 @@ public:
   void print();
   void addExp(ExpAst* exp);
   void genCode(stack<Register*> &regStack);
+  template<class T, class R>
+  void genCode(ExpAst* obj, T d1, R d2, stack<Register*>& regStack, string type);
 };
 
 class FloatConst : public ExpAst {
