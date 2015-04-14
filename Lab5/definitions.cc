@@ -997,6 +997,29 @@ void Op::genCode(stack<Register*> &regStack){
       cout<<"Type not supported"<<endl;
     }
   }  
+  else if (opr == "OR_OP"){
+    node1->fall = false;
+    node2->fall = fall;
+    node1->genCode(regStack);
+    int node2Start = nextInstr();
+    node2->genCode(regStack);
+    (node1->falseList)->backpatch(getInstr(node2Start));
+    trueList->merge(node1->trueList);
+    trueList->merge(node2->trueList);
+    falseList = node2->falseList;
+    
+  }
+  else if (opr == "AND_OP"){
+    node1->fall = true;
+    node2->fall = fall;
+    node1->genCode(regStack);
+    int node2Start = nextInstr();
+    node2->genCode(regStack);
+    (node1->trueList)->backpatch(getInstr(node2Start));
+    falseList->merge(node1->falseList);
+    falseList->merge(node2->falseList);
+    trueList = node2->trueList;
+  }
   else{//TODO
   }
 }
