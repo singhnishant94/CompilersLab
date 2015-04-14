@@ -663,6 +663,10 @@ Identifier :: Identifier(string _val) {
   
 }
 
+string Identifier::getIdentifierName(){
+  return val;
+}
+
 void Identifier::setRecord(GlRecord* _rec){
   rec = _rec;
 }
@@ -1050,7 +1054,94 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
   }
 }
 
-void Funcall::genCode(stack<Register*> &regStack){}
+void Funcall::genCode(stack<Register*> &regStack){
+  string func = funName->getIdentifierName();
+  if (func == "printf"){
+    /* special function to take care of */
+    
+  }
+  else {
+    /* User defined functions */
+    // Making space for return value
+    if (astnode_type->basetype == Type::Int){
+      codeStack.push_back(new Instr("pushi", "0"));
+    }
+    else if (astnode_type->basetype == Type::Float){
+      codeStack.push_back(new Instr("pushf", "0"));
+    }
+    else {
+      // TODO for Void
+    }
+    
+    // pusing of parameters on the esp stack
+    int l = vec.size();
+    // Pushing from right to left
+    int fcount = 0, icount = 0;
+    for (int i = l - 1; i >= 0; i--){ 
+      Type* t = vec[i]->getType();
+      int r = vec[i]->getrType();
+      if (t->basetype == Type::Int){
+	icount++;
+	if (r == 2){
+	  int val = ((IntConst*)vec[i])->getValue();
+	  codeStack.push_back(new Instr("pushi", toString(val)));
+	}
+	else {
+	  // code for finding the expression value in top reg
+	  vec[i]->genCode(regStack); 
+	  Register* reg = regStack.top();
+	  string regName = reg->getName();
+	  codeStack.push_back(new Instr("pushi", regName));
+	}
+      }
+      else if (t->basetype == Type::Float){
+	fcount++;
+	if (r == 2){
+	  int val = ((IntConst*)vec[i])->getValue();
+	  codeStack.push_back(new Instr("pushf", toString(val)));
+	}
+	else {
+	  // code for finding the expression value in top reg
+	  vec[i]->genCode(regStack); 
+	  Register* reg = regStack.top();
+	  string regName = reg->getName();
+	  codeStack.push_back(new Instr("pushf", regName));
+	}
+      }
+      else {
+	// TODO for Void 
+      }
+    }
+    
+    // call to the function
+    codeStack.push_back(new Instr(func, ""));
+    
+    // pop out parameters from the stack
+    if (icount)
+      codeStack.push_back(new Instr("popi", toString(icount)));
+    if (fcount)
+      codeStack.push_back(new Instr("popf", toString(fcount)));
+    
+    Register* reg = regStack.top();
+    string regName = reg->getName();
+
+    /* Get the return value in top reg and clean up return space */
+    if (astnode_type->basetype == Type::Int){
+      codeStack.push_back(new Instr("loadi", "ind(esp)", regName));
+      codeStack.push_back(new Instr("popi", "1"));
+    }
+    else if (astnode_type->basetype == Type::Float){
+      codeStack.push_back(new Instr("loadf", "ind(esp)", regName));
+      codeStack.push_back(new Instr("popf", "1"));
+    }
+    else {
+      // TODO for Void
+    }
+    
+  }
+  
+  
+}
 
 void FloatConst::genCode(stack<Register*> &regStack){
   int countReg = regStack.size();
