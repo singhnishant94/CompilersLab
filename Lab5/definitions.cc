@@ -1081,6 +1081,7 @@ void Funcall::genCode(stack<Register*> &regStack){
   string func = funName->getIdentifierName();
   if (func == "printf"){
     /* special function to take care of */
+    codeStack.push_back(new Instr("pushi", "0"));  // return value
     int l = vec.size(); 
     for (int i = 0; i < l; i++){
       Type *t = vec[i]->getType();
@@ -1105,6 +1106,12 @@ void Funcall::genCode(stack<Register*> &regStack){
 	// TODO, handling pointers
       }
     }
+    
+    // loading the return value and restoring the stack
+    Register* reg = regStack.top();
+    string regName = reg->getName();
+    codeStack.push_back(new Instr("loadi", "ind(esp)", regName));
+    codeStack.push_back(new Instr("popi", "1"));
   }
   else {
     /* User defined functions */
