@@ -47,7 +47,7 @@ function_definition
 	}
 	compound_statement 
 	{
-	  $$ = new FuncDef($4);
+	  $$ = new FuncDef($4, curFuncRecord->name);
 	  if (isMain){
 	    ((FuncDef*)$$)->setMain();
 	  }

@@ -111,6 +111,52 @@ int isType(S* src, R *dst){
   else return 0;
 }
 
+
+////////////////////////////////////////////////////
+/* the stack to maintain current in use registers */
+////////////////////////////////////////////////////
+
+vector<pair<Register*, int> > usedReg;
+
+void pushUsedReg(Register* reg, int d){
+  usedReg.push_back(pair<Register*, int>(reg, d));
+}
+
+void popUsedReg(){
+  if (usedReg.size() > 0)
+    usedReg.pop_back();
+}
+
+void saveUsedReg(){
+  int l = usedReg.size();
+  for(int i = 0; i < l; i++){
+    if (usedReg[i].second == 1){
+      codeStack.push_back(new Instr("pushi", (usedReg[i].first)->getName()));
+    }
+    else {
+      codeStack.push_back(new Instr("pushf", (usedReg[i].first)->getName()));
+    }
+  }
+}
+
+void loadUsedReg(){
+  int l = usedReg.size();
+  for(int i = l - 1; i >= 0; i--){
+    if (usedReg[i].second == 1){
+      codeStack.push_back(new Instr("loadi", "ind(esp)", (usedReg[i].first)->getName()));
+      codeStack.push_back(new Instr("popi", "1"));
+    }
+    else {
+      codeStack.push_back(new Instr("loadf", "ind(esp)", (usedReg[i].first)->getName()));
+      codeStack.push_back(new Instr("popf", "1"));
+    }
+  }
+}
+
+////////////////////////////////
+/* code for   support classes */
+////////////////////////////////    
+
 Type::Type() :
   tag(Ok) {
 }
@@ -315,7 +361,7 @@ string GotoInstr :: getLabel(){
 
 void GotoInstr :: print(){
   if (hasLabel) cout<<label<<":";
-  cout<<"\t"<<func<<"("<<arg1<<")"<<endl;
+  cout<<"\t"<<func<<"("<<arg1<<");"<<endl;
 }
 
 Instr :: Instr(){
@@ -364,15 +410,26 @@ string Instr :: getLabel(){
 
 void Instr :: print(){
   if (hasLabel) cout<<label<<":";
-  if (argCount == 0){
-    cout<<"\t"<<func<<endl;
-  }
+  if (argCount == 0)
+    cout<<"\t"<<func<<";"<<endl;
   else if (argCount == 1)
-    cout<<"\t"<<func<<"("<<arg1<<")"<<endl;  
-  else   cout<<"\t"<<func<<"("<<arg1<<","<<arg2<<")"<<endl;  
+    cout<<"\t"<<func<<"("<<arg1<<");"<<endl;  
+  else   cout<<"\t"<<func<<"("<<arg1<<","<<arg2<<");"<<endl;  
 }
 
 void Instr :: backpatch(Code* code){}
+
+HCode :: HCode(string _func){
+  func = _func;
+}
+
+void HCode :: print(){
+  cout<<func<<endl;
+}
+
+void HCode :: backpatch(Code* temp){;}
+string HCode :: getLabel(){;}
+void HCode :: setLabel(){;}
 
 void CList::add(Code* code){
   arr.push_back(code);
@@ -424,9 +481,10 @@ void ExpAst::setType(Type* t){
 }
 
 
-FuncDef :: FuncDef(StmtAst* _node1){
+FuncDef :: FuncDef(StmtAst* _node1, string _name){
   node1 = _node1;
   isMain = 0;
+  name = _name;
 }
 
 void FuncDef :: setMain(){
@@ -821,6 +879,9 @@ void FuncDef :: genCode(stack<Register*> &regStack){
 
 void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
   // generate the code for the body
+  codeStack.push_back(new HCode("void " + name + "()"));
+  codeStack.push_back(new HCode("{"));
+  
   if(!isMain){
     codeStack.push_back(new Instr("pushi", "ebp")); // set dynamic link
     codeStack.push_back(new Instr("move", "esp", "ebp")); // setting dyn link
@@ -828,25 +889,40 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
   
   map<int, GlType*> mp = symTab->getOrderedRecords();
   map<int, GlType*>::iterator itr = mp.begin();
+  vector<pair<int, int> > trr;
+  trr.push_back(pair<int, int>(0, 0));
+  // 1 - int, 2 - float
   for(;itr != mp.end(); itr++){
     GlType* temp = itr->second;
     if (temp->type == VarType::BASIC){
       string fun = "push";
-      if (((BasicType*)temp)->typeName == BasicVarType::INT) fun += "i";
-      else if (((BasicType*)temp)->typeName == BasicVarType::FLOAT) fun += "f";
+      if (((BasicType*)temp)->typeName == BasicVarType::INT){
+	fun += "i";
+	if (trr[trr.size() - 1].first == 1) trr[trr.size() - 1].second++;
+	else trr.push_back(pair<int, int>(1, 1));
+      }
+      else if (((BasicType*)temp)->typeName == BasicVarType::FLOAT){
+	fun += "f";
+	if (trr[trr.size() - 1].first == 2) trr[trr.size() - 1].second++;
+	else trr.push_back(pair<int, int>(2, 1));
+      }
       codeStack.push_back(new Instr(fun, "0"));
     }
     else {
       BasicVarType t = ((ArrayType*)temp)->getBasicVarType();
       string fun = "push";
+      int l = ((ArrayType*)temp)->calcDim();
       if (t == BasicVarType::INT){
 	fun += "i";
+	if (trr[trr.size() - 1].first == 1) trr[trr.size() - 1].second += l;
+	else trr.push_back(pair<int, int>(1, l));
       }
       else if (t == BasicVarType::FLOAT){
 	fun += "f";
+	if (trr[trr.size() - 1].first == 2) trr[trr.size() - 1].second += l;
+	else trr.push_back(pair<int, int>(2, l));
       }
       
-      int l = ((ArrayType*)temp)->calcDim();
       for(int i = 0; i < l; i++){
 	codeStack.push_back(new Instr(fun, "0"));
       }
@@ -854,14 +930,26 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
   }
   
   node1->genCode(regStack);
-  
   int nodeStart = nextInstr();
+  
+  int l1 = trr.size();
+  for(int i = l1 - 1; i > 0; i--){
+    if (trr[i].first == 1){
+      codeStack.push_back(new Instr("popi", toString(trr[i].second)));
+    }
+    else {
+      codeStack.push_back(new Instr("popf", toString(trr[i].second)));
+    }
+  }
+  
+  
   if (!isMain){
     codeStack.push_back(new Instr("loadi", "ind(esp)", "ebp"));  // storing dymanic link
     codeStack.push_back(new Instr("popi", "1"));  // pop stack
   }
   codeStack.push_back(new Instr("return"));
   (node1->nextList)->backpatch(getInstr(nodeStart));
+  codeStack.push_back(new HCode("}"));
 }
 
 
@@ -872,18 +960,14 @@ void Identifier::genCode(stack<Register*> &regStack){
     Register* top = regStack.top();
     string regName = top->getName();
     int offset = rec->offset;
-    //    cout<<"loadi(ind(ebp, "<<offset<<"), "<<regName<<")"<<endl;
-    codeStack.push_back(new Instr("loadi", toString(val), regName));
-    //cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
+    codeStack.push_back(new Instr("loadi", "ind(ebp, " + toString(offset) + ")", regName));
   }
   else if (astnode_type->basetype == Type::Float){
     /* variable is of type Float */
     Register* top = regStack.top();
     string regName = top->getName();
     int offset = rec->offset;
-    //    cout<<"loadf(ind(ebp, "<<offset<<"), "<<regName<<")"<<endl;
-    codeStack.push_back(new Instr("loadf", toString(val), regName));  
-    //cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
+    codeStack.push_back(new Instr("loadf", "ind(ebp, " + toString(offset) + ")", regName));  
   }
   else if (astnode_type->basetype == Type::String){
     /* variable is of type string */
@@ -1003,6 +1087,10 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
       else {
 	/* Store not needed as sufficent registers */
 	regStack.pop();                 // POP
+	
+	if (type == "i") pushUsedReg(reg1, 1);   // saving the register with type of data
+	else pushUsedReg(reg1, 2);
+
 	((Index*)node1)->genCodeLExp(regStack);
 	Register* reg2 = regStack.top();
 	string regName2 = reg2->getName();
@@ -1011,6 +1099,7 @@ void Ass::genCodeTemplate(T d1, R d2, stack<Register*> &regStack, string type){
 	codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
 	//cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	regStack.push(reg1);            // PUSH
+	popUsedReg();  // poping the saved register
       }
     }
   }
@@ -1203,6 +1292,7 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
 }
 
 void Funcall::genCode(stack<Register*> &regStack){
+  saveUsedReg();
   string func = funName->getIdentifierName();
   if (func == "printf"){
     /* special function to take care of */
@@ -1255,11 +1345,22 @@ void Funcall::genCode(stack<Register*> &regStack){
     int l = vec.size();
     // Pushing from right to left
     int fcount = 0, icount = 0;
+
+    /* stores the pushed back types
+       in order so as to used pop*(int) */
+    vector<pair<int, int> > trr;   
+    trr.push_back(pair<int, int>(0, 0));
+
     for (int i = l - 1; i >= 0; i--){ 
       Type* t = vec[i]->getType();
       int r = vec[i]->getrType();
       if (t->basetype == Type::Int){
 	icount++;
+
+	// storing count for the type of exp in sequence
+	if (trr[trr.size() - 1].first == 1) trr[trr.size() - 1].second++; 
+	else trr.push_back(pair<int, int>(1, 1));
+
 	if (r == 2){
 	  int val = ((IntConst*)vec[i])->getValue();
 	  codeStack.push_back(new Instr("pushi", toString(val)));
@@ -1274,6 +1375,11 @@ void Funcall::genCode(stack<Register*> &regStack){
       }
       else if (t->basetype == Type::Float){
 	fcount++;
+
+	// storing count for the type of exp in sequence
+	if (trr[trr.size() - 1].first == 2) trr[trr.size() - 1].second++; 
+	else trr.push_back(pair<int, int>(2, 1));
+	
 	if (r == 2){
 	  float val = ((FloatConst*)vec[i])->getValue();
 	  codeStack.push_back(new Instr("pushf", toString(val)));
@@ -1294,11 +1400,17 @@ void Funcall::genCode(stack<Register*> &regStack){
     // call to the function
     codeStack.push_back(new Instr(func, ""));
     
-    // pop out parameters from the stack
-    if (icount)
-      codeStack.push_back(new Instr("popi", toString(icount)));
-    if (fcount)
-      codeStack.push_back(new Instr("popf", toString(fcount)));
+    // // pop out parameters from the stack
+    // if (icount)
+    //   codeStack.push_back(new Instr("popi", toString(icount)));
+    // if (fcount)
+    //   codeStack.push_back(new Instr("popf", toString(fcount)));
+
+    int l1 = trr.size();
+    for(int i = l1 - 1; i > 0; i--){
+      if (trr[i].first == 1) codeStack.push_back(new Instr("popi", toString(trr[i].second)));
+      else codeStack.push_back(new Instr("popf", toString(trr[i].second)));
+    }
     
     Register* reg = regStack.top();
     string regName = reg->getName();
@@ -1317,6 +1429,7 @@ void Funcall::genCode(stack<Register*> &regStack){
     }
     
   }
+  loadUsedReg();
 }
 
 template<class T, class R>
@@ -1429,6 +1542,9 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       ((Index*)node1)->genCodeInternal(regStack);
       Register* reg1 = regStack.top();
       regStack.pop();
+
+      pushUsedReg(reg1, 1);   // saving the register with type of data
+
       node2->genCode(regStack);
       Register* reg2 = regStack.top();
 
@@ -1439,6 +1555,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       codeStack.push_back(new Instr("muli", toString(factor), regName2));
       codeStack.push_back(new Instr("addi", regName2, regName1));
       regStack.push(reg1);  // restore the stack
+      popUsedReg();   // poping the saved register
     }
   }
   else if (regCount == 2 && rr == 0){
@@ -1693,6 +1810,10 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 
 	Register* top2 = regStack.top();
 	regStack.pop();
+	
+	if (type == "i") pushUsedReg(top2, 1);
+	else pushUsedReg(top2, 2);
+	
 	node1->genCode(regStack);
 
 	Register* top1 = regStack.top();
@@ -1732,6 +1853,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	}
 
 	regStack.push(top2);
+	popUsedReg();
 	if (opr != "div")
 	  swapTopReg(regStack); // top1 contanis the evaulated expression
       }
@@ -1868,6 +1990,10 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	else {
 	  /* Store not needed as sufficent registers */
 	  regStack.pop();                 // POP
+
+	  if (type == "i") pushUsedReg(reg1, 1);
+	  else pushUsedReg(reg1, 2);
+
 	  ((Index*)node1)->genCodeLExp(regStack);
 	  Register* reg2 = regStack.top();
 	  string regName2 = reg2->getName();
@@ -1876,6 +2002,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("store" + type, regName2, "ind(" + regName2 + ")"));
 	  //	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	  regStack.push(reg1);            // PUSH
+	  popUsedReg();
 	}
       }
     }

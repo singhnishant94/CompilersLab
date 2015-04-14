@@ -124,6 +124,16 @@ class Instr : public Code{
   void print();
 };
 
+class HCode : public Code{
+public:
+  HCode(string);
+
+  void backpatch(Code*);
+  void setLabel();
+  string getLabel();
+  void print();
+};
+
 
 
 ///////////////////////////////////////////////////////
@@ -201,10 +211,13 @@ public:
 };
 
 class FuncDef : public StmtAst{
+protected:
   StmtAst* node1;
   int isMain;
+  string name;
+
 public:
-  FuncDef(StmtAst*);
+  FuncDef(StmtAst*, string);
   void print();
   void genCode(stack<Register*>&regStack);
   void genCode(stack<Register*> &regStack, SymTab* symTab);
