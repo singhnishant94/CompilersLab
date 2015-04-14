@@ -23,7 +23,7 @@ enum BasicVarType{
 class GlType {
  public:
     VarType type;
-    
+    virtual int calcSize() = 0;
 };
 
 
@@ -66,6 +66,7 @@ class FuncRecord : public GlRecord {
     FuncRecord(GlType*, string);
     bool match(string);
     void print();
+    int getRetOffset();
 };
 
 class VarRecord : public GlRecord {
@@ -83,6 +84,7 @@ class BasicType : public GlType {
     //constructor
     BasicType(BasicVarType);
     void print();
+    int calcSize();
 };
 
 class ArrayType : public GlType {

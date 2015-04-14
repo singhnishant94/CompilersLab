@@ -116,6 +116,8 @@ class Instr : public Code{
   Instr(string, string);
   Instr(string, string, string);
   Instr();
+  Instr(string);
+
   void backpatch(Code*);
   void setLabel();
   string getLabel();
@@ -198,6 +200,17 @@ public:
   void setLeaf();
 };
 
+class FuncDef : public StmtAst{
+  StmtAst* node1;
+  int isMain;
+public:
+  FuncDef(StmtAst*);
+  void print();
+  void genCode(stack<Register*>&regStack);
+  void genCode(stack<Register*> &regStack, SymTab* symTab);
+  void setMain();
+};
+
 class ArrayRef : public ExpAst {
 public:
   ArrayRef();
@@ -270,11 +283,15 @@ public:
 class Return : public StmtAst {
 protected:
   ExpAst* node1;
-  
+  int retOffset;
+
 public:
   Return(ExpAst* node1);
   void print();
   void genCode(stack<Register*> &regStack);
+  template<class T, class R>
+  void genCode(T d1, R d2, stack<Register*> & regStack, string type);
+  void setRetOffset(int);
 };
 
 

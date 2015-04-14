@@ -325,6 +325,13 @@ Instr :: Instr(){
   hasLabel = 0;
 }
 
+Instr :: Instr(string _func){
+  isGoto = 0;
+  func = _func;
+  argCount = 0;
+  hasLabel = 0;
+}
+
 Instr :: Instr(string _func, string _arg1){
   isGoto = 0;
   func = _func;
@@ -358,7 +365,7 @@ string Instr :: getLabel(){
 void Instr :: print(){
   if (hasLabel) cout<<label<<":";
   if (argCount == 0){
-    cout<<func<<endl;
+    cout<<"\t"<<func<<endl;
   }
   else if (argCount == 1)
     cout<<"\t"<<func<<"("<<arg1<<")"<<endl;  
@@ -414,6 +421,20 @@ Type* ExpAst::getType(){
 
 void ExpAst::setType(Type* t){
   astnode_type = t;
+}
+
+
+FuncDef :: FuncDef(StmtAst* _node1){
+  node1 = _node1;
+  isMain = 0;
+}
+
+void FuncDef :: setMain(){
+  isMain = 1;
+}
+
+void FuncDef :: print(){
+  node1->print();
 }
 
 
@@ -497,6 +518,12 @@ void For :: print(){
 
 Return :: Return(ExpAst* node1){
   this->node1 = node1;
+  retOffset = 4;
+  
+}
+
+void Return :: setRetOffset(int val){
+  retOffset = val;
 }
 
 void Return :: print(){
@@ -788,6 +815,29 @@ void swapTopReg(stack<Register*> &regStack){
 ////////////////////////////////////////////////////////////
 
 
+void FuncDef :: genCode(stack<Register*> &regStack){
+  cout<<"Error function called "<<endl;
+}
+
+void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
+  // generate the code for the body
+  if(!isMain){
+    codeStack.push_back(new Instr("pushi", "ebp")); // set dynamic link
+    codeStack.push_back(new Instr("move", "esp", "ebp")); // setting dyn link
+  }
+  
+  node1->genCode(regStack);
+  
+  int nodeStart = nextInstr();
+  if (!isMain){
+    codeStack.push_back(new Instr("loadi", "ind(esp)", "ebp"));  // storing dymanic link
+    codeStack.push_back(new Instr("popi", "1"));  // pop stack
+  }
+  codeStack.push_back(new Instr("return"));
+  (node1->nextList)->backpatch(getInstr(nodeStart));
+}
+
+
 void Identifier::genCode(stack<Register*> &regStack){
   int countReg = regStack.size();
   if (astnode_type->basetype == Type::Int){
@@ -823,18 +873,14 @@ void BlockAst::genCode(stack<Register*> &regStack){
   int l = vec.size();
   if (l > 0){
     vec[0]->genCode(regStack);
-  }
   
-  for (int i = 1; i < l; i++){
-    int nodeStart = nextInstr();
-    vec[i]->genCode(regStack);
-    (vec[i - 1]->nextList)->backpatch(getInstr(nodeStart));
-  }
-  if ((vec[l - 1]->nextList)->arr.size() != 0){
-    int nodeStart = nextInstr();
-    Instr* emptycode = new Instr();
-    codeStack.push_back(emptycode);
-    (vec[l - 1]->nextList)->backpatch(getInstr(nodeStart));
+    for (int i = 1; i < l; i++){
+      int nodeStart = nextInstr();
+      vec[i]->genCode(regStack);
+      (vec[i - 1]->nextList)->backpatch(getInstr(nodeStart));
+    }
+    
+    nextList = vec[l - 1]->nextList;
   }
 }
 
@@ -975,7 +1021,33 @@ void For::genCode(stack<Register*> &regStack){
 }
 
 void Return::genCode(stack<Register*> &regStack){
-  
+  // put the return value from exp onto top stack
+  if (astnode_type->basetype == Type::Int){
+    int d1; IntConst d2(1); 
+    genCode(d1, d2, regStack, "i");
+  }
+  else if (astnode_type->basetype == Type::Float){
+    float d1; FloatConst d2(1); 
+    genCode(d1, d2, regStack, "f");
+  }
+  else {
+    // TODO, other ret types
+  }
+}
+
+template<class T, class R>
+void Return::genCode(T d1, R d2, stack<Register*> & regStack, string type){
+  if (isType(node1, &d2)){
+    // constant case
+    T val = ((R*)node1)->getValue();
+    codeStack.push_back(new Instr("store" + type, toString(val), "ind(ebp, "  + toString(retOffset) + ")"));
+  }
+  else {
+    node1->genCode(regStack);
+    Register* reg = regStack.top();
+    string regName = reg->getName();
+    codeStack.push_back(new Instr("store" + type, regName, "ind(ebp, "  + toString(retOffset) + ")"));
+  }
 }
 
 void If::genCode(stack<Register*> &regStack){
@@ -1176,7 +1248,7 @@ void Funcall::genCode(stack<Register*> &regStack){
       else if (t->basetype == Type::Float){
 	fcount++;
 	if (r == 2){
-	  int val = ((IntConst*)vec[i])->getValue();
+	  float val = ((FloatConst*)vec[i])->getValue();
 	  codeStack.push_back(new Instr("pushf", toString(val)));
 	}
 	else {

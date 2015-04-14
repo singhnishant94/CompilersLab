@@ -20,6 +20,16 @@ FuncRecord::FuncRecord(GlType* retType, string _name){
     localSymTab = new SymTab();
 }
 
+int FuncRecord::getRetOffset(){
+  Param* head = paramList;
+  int val = 0;
+  while (head != 0){
+    val += ((head->rec)->keyType)->calcSize();
+    head = head->next;
+  }
+  return val;
+}
+
 VarRecord::VarRecord(GlType* _keyType, string _name){
     keyType = _keyType;
     type = VAR;
@@ -58,6 +68,16 @@ void BasicType::print(){
     case FLOAT : cout<<"FLOAT"<<" ";
 	break;
     }
+}
+
+int BasicType::calcSize(){
+  if (typeName == BasicVarType::INT){
+    return 4;
+  }
+  if (typeName == BasicVarType::FLOAT){
+    return 4;
+  }
+  else return 0;  
 }
 
 ArrayType::ArrayType(GlType* glt){

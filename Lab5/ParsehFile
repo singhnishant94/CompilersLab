@@ -14,11 +14,15 @@ int width;
 int libFunc;
 stack<Register*> regStack;
 int countReg;
+FuncRecord* curFuncRecord;
+int isMain;
 
 Parser(){
+	isMain = 0;
 	globalTab = new SymTab();
 	currentTab = globalTab;
 	head = 0;
+	curFuncRecord = 0;
 	current = 0;
 	headParam = 0;
 	curParam = 0;

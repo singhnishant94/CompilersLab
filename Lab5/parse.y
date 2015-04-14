@@ -47,8 +47,12 @@ function_definition
 	}
 	compound_statement 
 	{
-	  $$ = $4;
-	  $$->genCode(regStack);
+	  $$ = new FuncDef($4);
+	  if (isMain){
+	    ((FuncDef*)$$)->setMain();
+	  }
+
+	  ((FuncDef*)$$)->genCode(regStack, currentTab);
 	  currentTab = globalTab;
 	}
 	;
@@ -77,13 +81,19 @@ fun_declarator
 	    curOffset = 4;
 	    BasicType* retType = new BasicType(currentType);
 	    func = new FuncRecord(retType, $1);
+	    if ($1 == "main"){
+	      isMain = 1;
+	    }
+	    else {
+	      isMain = 0;
+	    }
 	    if (currentTab->find(RecordType::FUNC, $1)){
 	      cout<<"Function already defined, Line : "<<lineNo<<endl; exit(0);
 	    }
 	    func->offset = GlOffset;
 	    currentTab->add(func);
 	    currentTab = func->localSymTab;
-	    
+	    curFuncRecord = func;
 	}
 	parameter_list ')' 
 	{
@@ -94,6 +104,12 @@ fun_declarator
 	}
         | IDENTIFIER '(' ')' 
 	{
+	  if ($1 == "main"){
+	    isMain = 1;
+	  }
+	  else {
+	    isMain = 0;
+	  }
 	    curOffset = 0;
 	    BasicType* retType = new BasicType(currentType);
 	    func = new FuncRecord(retType, $1);
@@ -105,6 +121,7 @@ fun_declarator
 	    currentTab = func->localSymTab;
 	    GlOffset += curOffset;
 	    curOffset = 0;
+	    curFuncRecord = func;
 	}
 	;
 
@@ -249,13 +266,32 @@ statement
 	}
         | RETURN expression ';'	
 	{
-	  $$ = new Return($2);
+
 	  Type *t = $2->getType();
-	  if (t->tag == Type::Error){
-	    $$->setType(new Type(Type::Error));
+	  Type* ret = getVarType(curFuncRecord->returnType);
+	  if (!compatible(t, ret)){
+	    cout<<"Return types donot match Lineno :" <<lineNo<<endl; exit(0);
 	  }
+	  if (equal(t, ret))
+	    $$ = new Return($2);
 	  else {
+	    if (ret->basetype == Type::Int){
+	      $$ = new Return(new ToInt($2));
+	    }
+	    else if (ret->basetype == Type::Float){
+	      $$ = new Return(new ToFloat($2));
+	    }
+	    else {
+	      cout<<"Cannot type cast"<<endl;
+	    }
+	  }
+	  if (t->tag == Type::Error){
+	    $$->setType(new Type(Type::Error)); 
+	  }
+	  else{
 	    $$->setType(new Type(Type::Ok));
+	    // offset is 4 (dynamic length) + parameter cost total
+	    ((Return*)$$)->setRetOffset(4 + curFuncRecord->getRetOffset());
 	  }
 	}
         | IDENTIFIER '(' ')' ';'
@@ -696,7 +732,6 @@ expression_list
 
 	    ExpAst* temp = $1;
 	    $$ = new Funcall();
-	    ((Funcall*)$$)->addExp(temp);
 	    $$->setType(0);
 	    
 	    if (libFunc){ // this part is for bypassing the library functions as printf
@@ -718,8 +753,23 @@ expression_list
 		  Type* t = getVarType((curParam->rec)->keyType);
 		  if (equal(t, temp->getType())){
 		    curParam = curParam->next;
+		    ((Funcall*)$$)->addExp(temp);
 		  }
-		  else {
+		  else if (compatible(t, temp->getType())){
+		    if (t->basetype == Type::Int){
+		      curParam = curParam->next;
+		      ((Funcall*)$$)->addExp(new ToInt(temp));		    
+		    }
+		    else if (t->basetype == Type::Float){
+		      curParam = curParam->next;
+		      ((Funcall*)$$)->addExp(new ToFloat(temp));
+		    }
+		    else {
+		      cout<<"UnIdentified type "<<endl;
+		    }
+
+		  }
+		  else{
 		    cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
 		    $$->setType(new Type(Type::Error));
 		  }
@@ -731,7 +781,7 @@ expression_list
 	{
 	  
 	    $$ = $1;
-	    ((Funcall*)$$)->addExp($3);
+
 	    Type* t = $$->getType();
 	    
 	    if (t == 0){
@@ -750,6 +800,20 @@ expression_list
 		  t = getVarType((curParam->rec)->keyType);
 		  if (equal(t, $3->getType())){
 		    curParam = curParam->next;
+		    ((Funcall*)$$)->addExp($3);
+		  }
+		  else if (compatible(t, $3->getType())){
+		    if (t->basetype == Type::Int){
+		      curParam = curParam->next;
+		      ((Funcall*)$$)->addExp(new ToInt($3));		    
+		    }
+		    else if (t->basetype == Type::Float){
+		      curParam = curParam->next;
+		      ((Funcall*)$$)->addExp(new ToFloat($3));
+		    }
+		    else {
+		      cout<<"UnIdentified type "<<endl;
+		    }
 		  }
 		  else {
 		    cout<<"Mismatched parameter!! lineno: "<<lineNo<<endl; exit(0);
