@@ -18,7 +18,7 @@
 pre_translation_unit
         : translation_unit
 	{
-	    globalTab->print();
+	  //globalTab->print();
 	}
         ;
 
@@ -28,15 +28,15 @@ translation_unit
 	    $$ = $1; 
 	    printCodeStack();
 	    resetCodeStack();
-	    $$->print();
-	    cout<<endl;
+	    //$$->print();
+	    //cout<<endl;
 	}
 	| translation_unit function_definition 
 	{
 	  printCodeStack();
 	  resetCodeStack();
-	  $2->print();
-	  cout<<endl;
+	  //$2->print();
+	  //cout<<endl;
 	}
         ;
 
@@ -739,6 +739,7 @@ expression_list
 	      if (t->tag == Type::Error){ // handling the error in expression
 		$$->setType(t);
 	      }
+	      ((Funcall*)$$)->addExp(temp);
 	    }
 	    else {
 	      if (func == 0){
@@ -790,6 +791,7 @@ expression_list
 		if (t3->tag == Type::Error){   // chcking for error in expression $3
 		  $$->setType(t3);
 		}
+		((Funcall*)$$)->addExp($3);
 	      }
 	      else {     // user defined function
 		if (curParam == 0){
