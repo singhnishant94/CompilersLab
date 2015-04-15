@@ -1409,7 +1409,7 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
       val = -val;
       Register* reg = regStack.top();
       string regName = reg->getName();
-      codeStack.push_back(new Instr("load" + type, regName, toString(val)));
+      codeStack.push_back(new Instr("move", toString(val), regName));
       //cout<<"load"<<type<<"("<<regName<<", "<<val<<")"<<endl;
     }
   }
