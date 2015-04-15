@@ -1643,7 +1643,7 @@ void FloatConst::genCode(stack<Register*> &regStack){
   Register *top = regStack.top();
   string regName = top->getName();
   float val = getValue();
-  codeStack.push_back(new Instr("loadf", toString(val), regName));
+  codeStack.push_back(new Instr("move", toString(val*1.0), regName));
   //cout<<"loadf("<<val<<", "<<regName<<")"<<endl;
 }
 
@@ -1652,7 +1652,7 @@ void IntConst::genCode(stack<Register*> &regStack){
   Register *top = regStack.top();
   string regName = top->getName();
   int val = getValue();
-  codeStack.push_back(new Instr("loadi", toString(val), regName));
+  codeStack.push_back(new Instr("move", toString(val), regName));
   //cout<<"loadi("<<val<<", "<<regName<<")"<<endl;
   
 }
