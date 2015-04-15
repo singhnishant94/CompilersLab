@@ -1114,7 +1114,7 @@ void While::genCode(stack<Register*> &regStack){
   (node1->trueList)->backpatch(getInstr(node2Start));
   (node2->nextList)->backpatch(getInstr(node1Start));
   nextList = node1->falseList;
-  GotoInstr* code = new GotoInstr("jl");
+  GotoInstr* code = new GotoInstr("j");
   codeStack.push_back(code);
   code->backpatch(getInstr(node1Start));
 }
@@ -1128,7 +1128,7 @@ void For::genCode(stack<Register*> &regStack){
   node4->genCode(regStack);
   int node3Start = nextInstr();
   node3->genCode(regStack);
-  GotoInstr* code2 = new GotoInstr("jl");
+  GotoInstr* code2 = new GotoInstr("j");
   codeStack.push_back(code2);
   (node2->trueList)->backpatch(getInstr(node4Start));
   (node4->nextList)->backpatch(getInstr(node3Start));
@@ -1171,7 +1171,7 @@ void If::genCode(stack<Register*> &regStack){
   node1->genCode(regStack);      
   int node2Start = nextInstr();
   node2->genCode(regStack);
-  GotoInstr* code = new GotoInstr("jl");
+  GotoInstr* code = new GotoInstr("j");
   codeStack.push_back(code);
   nextList->add(code);
   int node3Start = nextInstr();
