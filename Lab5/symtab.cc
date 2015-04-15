@@ -119,8 +119,8 @@ int ArrayType::calcSize(){
 }
 
 int ArrayType::calcDim(){
-  if (typeName->type == VarType::BASIC) return 1;
-  else return dim*(((ArrayType*)typeName)->calcDim());
+  if (typeName->type == VarType::BASIC) return dim;
+  else return dim * (((ArrayType*)typeName)->calcDim());
 }
 
 BasicVarType ArrayType::getBasicVarType(){

@@ -1006,7 +1006,7 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
     else {
       BasicVarType t = ((ArrayType*)temp)->getBasicVarType();
       string fun = "push";
-      int l = ((ArrayType*)temp)->calcDim();
+      int l = ((ArrayType*)temp)->calcDim(); 
       if (t == BasicVarType::INT){
 	fun += "i";
 	if (trr[trr.size() - 1].first == 1) trr[trr.size() - 1].second += l;
@@ -1410,22 +1410,77 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
       Register* reg = regStack.top();
       string regName = reg->getName();
       codeStack.push_back(new Instr("move", toString(val), regName));
-      //cout<<"load"<<type<<"("<<regName<<", "<<val<<")"<<endl;
     }
   }
   else {
-    node1->genCode(regStack);
-    Register* reg = regStack.top();
-    string regName = reg->getName();
     if (op == UnOpType::UMINUS){
+      node1->genCode(regStack);
+      Register* reg = regStack.top();
+      string regName = reg->getName();
+      
       codeStack.push_back(new Instr("mul" + type, "-1", regName));
-      //cout<<"mul"<<type<<"(-1, "<<regName<<")"<<endl;
     }
     else if (op == UnOpType::PP){
-      codeStack.push_back(new Instr("add" + type, "1", regName));
-      //cout<<"add"<<type<<"(1, "<<regName<<")"<<endl;
+      
+      int regCount = regStack.size();
+      int lr = node1->getrType();
+      if (lr == 1){
+	// the val + 1 is calculated in exp
+	node1->genCode(regStack);
+	Register *reg = regStack.top();
+	string regName = reg->getName();
+	codeStack.push_back(new Instr("add" + type, "1", regName));
+	VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
+	int offset = rec->offset;
+	codeStack.push_back(new Instr("store" + type, regName, "ind(ebp, " + toString(offset) + ")"));
+      }
+      else {
+	/* case when array on LHS */
+	node1->genCode(regStack);
+	Register *reg1 = regStack.top();
+	string regName1 = reg1->getName();
+	codeStack.push_back(new Instr("add" + type, "1", regName1));      
+	if (regCount == 2){
+	  /* Need to store the result calculated in this case */
+	  codeStack.push_back(new Instr("push" + type, regName1));
+	  //cout<<"push"<<type<<"("<<regName1<<")"<<endl;
+	  swapTopReg(regStack);             // SWAP
+	  ((Index*)node1)->genCodeLExp(regStack);
+	  swapTopReg(regStack);             // SWAP
+	  reg1 = regStack.top();
+	  regName1 = reg1->getName();
+	  regStack.pop();                 // POP
+	  codeStack.push_back(new Instr("load" + type, "ind(esp) ", regName1));
+	  codeStack.push_back(new Instr("pop" + type, "1"));
+	  
+	  Register* reg2 = regStack.top();
+	  string regName2 = reg2->getName();
+	  
+	  // reg2 has the addr, reg1 has the value
+	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
+	  regStack.push(reg1);              // PUSH
+	}
+	else {
+	  /* Store not needed as sufficent registers */
+	  regStack.pop();                 // POP
+	  
+	  if (type == "i") pushUsedReg(reg1, 1);   // saving the register with type of data
+	  else pushUsedReg(reg1, 2);
+	  
+	  ((Index*)node1)->genCodeLExp(regStack);
+	  Register* reg2 = regStack.top();
+	  string regName2 = reg2->getName();
+	  
+	  // reg2 has the addr, reg1 has the value
+	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
+	  regStack.push(reg1);            // PUSH
+	  popUsedReg();  // poping the saved register
+	}
+      }
     }
+    
   }
+  
 }
 
 void Funcall::genCode(stack<Register*> &regStack){
@@ -1615,7 +1670,7 @@ void Index::genCodeLExp(stack<Register*> &regStack){
   genCodeInternal(regStack);
   Register* reg = regStack.top();
   string regName = reg->getName();
-  codeStack.push_back(new Instr("addi", "ebs", regName));
+  codeStack.push_back(new Instr("addi", "ebp", regName));
 }
 
 
@@ -1624,7 +1679,7 @@ void Index::genCode(stack<Register*> &regStack){
   genCodeInternal(regStack);
   Register* reg = regStack.top();
   string regName = reg->getName();
-  codeStack.push_back(new Instr("addi", "ebs", regName));
+  codeStack.push_back(new Instr("addi", "ebp", regName));
   if (astnode_type->getBasetype() == Type::Int){
     codeStack.push_back(new Instr("loadi", "ind(" + regName + ")", regName));
   }
@@ -1660,7 +1715,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int factor = astnode_type->calcSize();
       Register* reg2 = regStack.top();
       string regName2 = reg2->getName();
-      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      codeStack.push_back(new Instr("muli", toString(-factor), regName2));  // negating the factor
       swapTopReg(regStack);               // SWAP, top restored
 
       // obtaining the dimension in regName
@@ -1668,8 +1723,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int offset = rec->offset;
       Register *reg = regStack.top();
       string regName = reg->getName();
-      codeStack.push_back(new Instr("loadi", toString(offset), regName));
-      //      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
+      codeStack.push_back(new Instr("move", toString(offset), regName));
       
       // adding the offset to the dimension in regName
       codeStack.push_back(new Instr("addi", regName2, regName));
@@ -1689,7 +1743,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       string regName2 = reg2->getName();
       
       int factor = astnode_type->calcSize();
-      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      codeStack.push_back(new Instr("muli", toString(-factor), regName2)); // negating the factor
       codeStack.push_back(new Instr("addi", regName2, regName1));
       regStack.push(reg1);  // restore the stack
       popUsedReg();   // poping the saved register
@@ -1707,7 +1761,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int factor = astnode_type->calcSize();
       Register* reg2 = regStack.top();
       string regName2 = reg2->getName();
-      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      codeStack.push_back(new Instr("muli", toString(-factor), regName2));  // negating factor
       swapTopReg(regStack);               // SWAP, top restored
 
       // obtaining the dimension in regName
@@ -1715,8 +1769,7 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       int offset = rec->offset;
       Register *reg = regStack.top();
       string regName = reg->getName();
-      codeStack.push_back(new Instr("loadi", toString(offset), regName));
-      //      cout<<"loadi("<<offset<<", "<<regName<<")"<<endl;
+      codeStack.push_back(new Instr("move", toString(offset), regName));
       
       // adding the offset to the dimension in regName
       codeStack.push_back(new Instr("addi", regName2, regName));
@@ -1728,7 +1781,6 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       // Saving the register value
       string regName1 = reg1->getName();
       codeStack.push_back(new Instr("pushi", regName1));
-      //      cout<<"pushi("<<regName1<<")"<<endl;   // push the reg Value
       swapTopReg(regStack);   // SWAP
       
       node2->genCode(regStack);
@@ -1739,12 +1791,10 @@ void Index::genCodeInternal(stack<Register*> &regStack){
       regStack.pop();               // POP
       regName1 = reg1->getName();
       codeStack.push_back(new Instr("loadi", "ind(esp)", regName1));
-      //      cout<<"loadi(ind(esp), "<<regName1<<")"<<endl;   // loading pushed value from stack
       codeStack.push_back(new Instr("popi", "1"));
-      //cout<<"popi(1)"<<endl;    // restore esp stack
 
       int factor = astnode_type->calcSize();
-      codeStack.push_back(new Instr("muli", toString(factor), regName2));
+      codeStack.push_back(new Instr("muli", toString(-factor), regName2)); // negating factor
       codeStack.push_back(new Instr("addi", regName2, regName1));
       regStack.push(reg1);  // restore the stack
       
