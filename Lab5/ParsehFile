@@ -16,6 +16,8 @@ stack<Register*> regStack;
 int countReg;
 FuncRecord* curFuncRecord;
 int isMain;
+stack<Param*> paramStack;
+stack<int> libFuncStack;
 
 Parser(){
 	isMain = 0;

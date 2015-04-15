@@ -327,6 +327,8 @@ statement
 	}
         | IDENTIFIER '(' 
 	{
+	  paramStack.push(curParam);
+	  libFuncStack.push(libFunc);
 	  if (currentTab->find(RecordType::VAR, $1)){
 	    cout<<$1<<" cannot be used as function, Lineno : "<<lineNo<<endl; exit(0);
 	  }
@@ -346,6 +348,7 @@ statement
 	    curParam = func->paramList;
 	    libFunc = 0;
 	  }
+	
 	}
         expression_list ')' ';'
 	{
@@ -374,6 +377,10 @@ statement
 	  }
 	  
 	  $$ = new FuncallStmt(temp);
+	  curParam = paramStack.top();
+	  paramStack.pop();
+	  libFunc = libFuncStack.top();
+	  libFuncStack.pop();
 	}
         ;
 
@@ -585,7 +592,8 @@ postfix_expression
 	}
 	| IDENTIFIER '(' 
 	{
-	  
+	  libFuncStack.push(libFunc);
+	  paramStack.push(curParam);
 	  if (currentTab->find(RecordType::VAR, $1)){
 	    cout<<$1<<" cannot be used as function, Lineno : "<<lineNo<<endl; exit(0);
 	  }
@@ -605,6 +613,7 @@ postfix_expression
 	      curParam = func->paramList;
 	      libFunc = 0;
 	    }
+	    
 	}
 	expression_list ')' 
 	{
@@ -632,6 +641,10 @@ postfix_expression
 	    else {
 	      libFunc = 0; // reset the value
 	    }
+	    curParam = paramStack.top();
+	    paramStack.pop();
+	    libFunc = libFuncStack.top();
+	    libFuncStack.pop();
 	}
 	| l_expression INC_OP
 	{
@@ -730,10 +743,10 @@ l_expression
 		$$->setType(t1->pointed);
 	    }
 	  
-	    if (curGlType->type != VarType::BASIC){
-		//cout<<"Incompatible Types. line :"<<lineNo<<endl; exit(0);
-		curGlType = ((ArrayType*)curGlType)->typeName;
-	    }
+	    /* if (curGlType->type != VarType::BASIC){ */
+	    /* 	//cout<<"Incompatible Types. line :"<<lineNo<<endl; exit(0); */
+	    /* 	curGlType = ((ArrayType*)curGlType)->typeName; */
+	    /* } */
 	}
         ;
 
