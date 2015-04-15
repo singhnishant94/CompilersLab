@@ -134,6 +134,15 @@ public:
   void print();
 };
 
+class LCode : public Code{
+public:
+  LCode();
+
+  void backpatch(Code*);
+  void setLabel();
+  string getLabel();
+  void print();
+};
 
 
 ///////////////////////////////////////////////////////
@@ -204,10 +213,15 @@ public:
   int fall;                                  // denotes fall through
   CList *nextList, *trueList, *falseList;    // lists
 
+  int arith;
+  int logical;
+
   ExpAst();
   Type* getType();
   void setType(Type*);
   void setLeaf();
+  void setArith();
+  void setLogical();
 };
 
 class FuncDef : public StmtAst{
@@ -340,9 +354,9 @@ public:
 class UnOp : public ExpAst {
 protected:
   ExpAst* node1;
-  UnOpType op;
   
 public:
+  UnOpType op;  
   UnOp(ExpAst* node1, UnOpType _op);
   UnOp(UnOpType _op);
   void print();

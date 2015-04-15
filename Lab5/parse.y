@@ -426,7 +426,8 @@ logical_and_expression
 	{
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::AND_OP);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	}
 	;
 
@@ -439,13 +440,15 @@ equality_expression
 	{
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::EQ_OP);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	}
 	| equality_expression NE_OP relational_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::NE_OP);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	}
 	;
 relational_expression
@@ -457,25 +460,29 @@ relational_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::LT);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	}
         | relational_expression '>' additive_expression
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::GT);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	} 
 	| relational_expression LE_OP additive_expression 
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::LE_OP);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	}
         | relational_expression GE_OP additive_expression 
 	{ 
 	  Type *t = $1->getType();
 	  $$ = new Op($1, $3, OpType::GE_OP);
-	  $$->setType(formType(t, $3->getType(), lineNo));
+	  formType(t, $3->getType(), lineNo);
+	  $$->setType(new Type(Type::Base, Type::Int));
 	}
 	;
 
@@ -528,12 +535,17 @@ unary_expression
 	      $$->setType(new Type(Type::Error));
 	  }
 	  else{
+	    if (((UnOp*)$$)->op == UnOpType::NOT){
+	      $$->setType(new Type(Type::Base ,Type::Int));
+	    }
+	    else {
 	      if (t->basetype == Type::Int){
 		  $$->setType(new Type(Type::Base ,Type::Int));
 	      }
 	      else if (t->basetype == Type::Float){
 		  $$->setType(new Type(Type::Base ,Type::Float));
 	      }
+	    }
 	  }
 	}
 	;

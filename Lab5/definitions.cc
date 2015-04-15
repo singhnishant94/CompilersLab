@@ -428,8 +428,41 @@ void HCode :: print(){
 }
 
 void HCode :: backpatch(Code* temp){;}
-string HCode :: getLabel(){;}
-void HCode :: setLabel(){;}
+string HCode :: getLabel(){
+   return "";
+}
+
+void HCode :: setLabel(){
+  if (!hasLabel){
+    // set the label
+    label = getNextLabel();
+    hasLabel = 1;
+  }
+}
+
+LCode :: LCode(){
+  hasLabel = 0;
+  label = "";
+}
+
+void LCode :: setLabel(){
+  if (!hasLabel){
+    // if has no label
+    label = getNextLabel();
+    hasLabel = 1;
+  }
+}
+
+string LCode :: getLabel(){
+  if (hasLabel) return label;
+  else return "";
+}
+
+void LCode :: print(){
+  if (hasLabel) cout<<label<<":"<<endl;
+}
+
+void LCode :: backpatch(Code* temp){;}
 
 void CList::add(Code* code){
   arr.push_back(code);
@@ -449,6 +482,22 @@ void CList::merge(CList* clist){
 
 /* Definitions for the AST's */
 
+
+ExpAst* getConstType(Type* t){
+  if (t->basetype == Type::Int){
+    IntConst* temp = new IntConst(0);
+    temp->setType(t);
+    return temp;
+  }
+  else if (t->basetype == Type::Float){
+    FloatConst* temp = new FloatConst(0);
+    temp->setType(t);
+    return temp;
+  }
+  else return 0;
+}
+
+
 int abstract_astnode :: getrType(){
   return rType;
 }
@@ -466,7 +515,8 @@ void StmtAst::setType(Type* t){
 }
 
 ExpAst::ExpAst(){
-  fall = 0;
+  fall = 1;
+  arith = 1;
   nextList = new CList();
   trueList = new CList();
   falseList = new CList();
@@ -478,6 +528,14 @@ Type* ExpAst::getType(){
 
 void ExpAst::setType(Type* t){
   astnode_type = t;
+}
+
+void ExpAst::setArith(){
+  arith = 0;
+}
+
+void ExpAst::setLogical(){
+  logical = 1;
 }
 
 
@@ -548,6 +606,10 @@ void Ass :: print(){
 
 While :: While(ExpAst* node1, StmtAst* node2) {
   this->node1 = node1;
+  if (!node1->logical){
+    this->node1 = new Op(this->node1, getConstType(node1->getType()), OpType::NE_OP);
+  }
+  (this->node1)->setArith();
   this->node2 = node2;
 }
 
@@ -561,6 +623,10 @@ void While :: print(){
 For :: For(ExpAst* node1, ExpAst* node2, ExpAst* node3, StmtAst* node4) {
   this->node1 = node1;
   this->node2 = node2;
+  if (!node2->logical){
+    this->node2 = new Op(this->node2, getConstType(node2->getType()), OpType::NE_OP);
+  }
+  (this->node2)->setArith();
   this->node3 = node3;
   this->node4 = node4;
 }
@@ -592,6 +658,10 @@ void Return :: print(){
 
 If :: If(ExpAst* node1, StmtAst* node2, StmtAst* node3){
   this->node1 = node1;
+  if (!node1->logical){
+    this->node1 = new Op(this->node1, getConstType(node1->getType()), OpType::NE_OP);
+  }
+  (this->node1)->setArith();
   this->node2 = node2;
   this->node3 = node3;
 }
@@ -604,14 +674,18 @@ void If :: print(){
   cout<<")";
 }
 
+
 Op :: Op(ExpAst* _node1, ExpAst* _node2, OpType _op) {
   node1 = _node1;
   node2 = _node2;
   op = _op;
   rType = 0;
-  
+  logical = 0;
   
   string opr = op_value[op];
+  
+  if (opr == "EQ_OP" || opr == "NE_OP" || opr == "LT" || opr == "GT" || opr == "LE_OP" || opr == "GE_OP") logical = 1;
+  
   if (opr == "Assign_exp"){
     Type* t1 = node1->getType();
     Type* t2 = node2->getType();
@@ -633,6 +707,16 @@ Op :: Op(ExpAst* _node1, ExpAst* _node2, OpType _op) {
       if (t2->basetype == Type::Int){
 	node2 = new ToFloat(node2);
       }
+    }
+  }
+  
+  if (opr == "AND_OP" || opr == "OR_OP"){
+    logical = 1; 
+    if (!node1->logical){
+      node1 = new Op(node1, getConstType(node1->getType()), OpType::NE_OP);
+    }
+    if (!node2->logical){
+      node2 = new Op(node2, getConstType(node2->getType()), OpType::NE_OP);
     }
   }
   
@@ -658,12 +742,17 @@ UnOp :: UnOp(ExpAst* node1, UnOpType _op) {
   this->node1 = node1;
   op = _op;
   rType = 0;
-  
+  if (op == UnOpType::NOT){
+    logical = 1;
+  }
+  else logical = 0;
 }
 
 UnOp :: UnOp(UnOpType _op){
   op = _op;
-  
+  logical = 0;
+  rType = 0;
+  if (op == UnOpType::NOT) logical = 1;
 }
 
 
@@ -676,11 +765,17 @@ void UnOp :: print(){
 void UnOp::setExp(ExpAst* node1){
   this->node1 = node1;
   // check for lexp here for PP
+  if (op == UnOpType::NOT){
+    logical = 1;
+    if (!node1->logical){
+      this->node1 = new Op(this->node1, getConstType(node1->getType()), OpType::NE_OP);
+    }
+  }
 }
 
 Funcall :: Funcall() {
   rType = 0;
-  
+  logical = 0;
 }
 
 void Funcall :: print(){
@@ -707,7 +802,7 @@ void Funcall :: addExp(ExpAst* exp){
 FloatConst :: FloatConst(float _val) {
   val = _val;
   rType = 2;
-  
+  logical = 0;
 }
 
 void FloatConst :: print(){
@@ -721,7 +816,7 @@ float FloatConst :: getValue(){
 IntConst :: IntConst(int _val) {
   val = _val;
   rType = 2;
-  
+  logical = 0;
 }
 
 int IntConst :: getValue(){
@@ -735,7 +830,7 @@ void IntConst :: print(){
 StringConst :: StringConst(string _val) {
   val = _val;
   rType = 2;
-  
+  logical = 0;
 }
 
 string StringConst :: getValue(){
@@ -754,7 +849,7 @@ Identifier :: Identifier(string _val) {
   val = _val;
   rType = 1;
   rec = 0;
-  
+  logical = 0;
 }
 
 string Identifier::getIdentifierName(){
@@ -781,7 +876,7 @@ Index :: Index(ArrayRef* node1, ExpAst* node2) {
   this->node1 = node1;
   this->node2 = node2;
   rType = 0;
-  
+  logical = 0;
 }
 
 void Index :: print(){
@@ -818,7 +913,7 @@ ToFloat::ToFloat(ExpAst* node1){
   }
   
   rType = 0;
-  
+  logical = 0;
 }
 
 void ToFloat::print(){
@@ -839,7 +934,7 @@ ToInt::ToInt(ExpAst* node1){
   }
 
   rType = 0;
-  
+  logical = 0;
 }
 
 void ToInt::print(){
@@ -1209,27 +1304,62 @@ void Op::genCode(stack<Register*> &regStack){
     }
   }  
   else if (opr == "OR_OP"){
-    node1->fall = false;
-    node2->fall = fall;
-    node1->genCode(regStack);
-    int node2Start = nextInstr();
-    node2->genCode(regStack);
-    (node1->falseList)->backpatch(getInstr(node2Start));
-    trueList->merge(node1->trueList);
-    trueList->merge(node2->trueList);
-    falseList = node2->falseList;
-    
+    if(arith){
+      node1->fall = 1;
+      node1->genCode(regStack);
+      Register* reg = regStack.top();
+      string regName = reg->getName();
+      codeStack.push_back(new Instr("cmpi", "1", regName));
+      GotoInstr* gt1 = new GotoInstr("je");
+      codeStack.push_back(gt1);
+      node2->fall = 1;
+      node2->genCode(regStack);
+      int nodeStart = nextInstr();
+      codeStack.push_back(new LCode());
+      gt1->backpatch(getInstr(nodeStart));
+    }
+    else{
+      node1->setArith();
+      node2->setArith();
+      node1->fall = false;
+      node2->fall = fall;
+      node1->genCode(regStack);
+      int node2Start = nextInstr();
+      node2->genCode(regStack);
+      (node1->falseList)->backpatch(getInstr(node2Start));
+      trueList->merge(node1->trueList);
+      trueList->merge(node2->trueList);
+      falseList = node2->falseList;
+    }
   }
   else if (opr == "AND_OP"){
-    node1->fall = true;
-    node2->fall = fall;
-    node1->genCode(regStack);
-    int node2Start = nextInstr();
-    node2->genCode(regStack);
-    (node1->trueList)->backpatch(getInstr(node2Start));
-    falseList->merge(node1->falseList);
-    falseList->merge(node2->falseList);
-    trueList = node2->trueList;
+    if (arith){
+      node1->fall = 1;
+      node1->genCode(regStack);
+      Register* reg = regStack.top();
+      string regName = reg->getName();
+      codeStack.push_back(new Instr("cmpi", "0", regName));
+      GotoInstr* gt1 = new GotoInstr("je");
+      codeStack.push_back(gt1);
+      node2->fall = 1;
+      node2->genCode(regStack);
+      int nodeStart = nextInstr();
+      codeStack.push_back(new LCode());
+      gt1->backpatch(getInstr(nodeStart));
+    }
+    else{
+      node1->setArith();
+      node2->setArith();
+      node1->fall = true;
+      node2->fall = fall;
+      node1->genCode(regStack);
+      int node2Start = nextInstr();
+      node2->genCode(regStack);
+      (node1->trueList)->backpatch(getInstr(node2Start));
+      falseList->merge(node1->falseList);
+      falseList->merge(node2->falseList);
+      trueList = node2->trueList;
+    }
   }
   else{//TODO
   }
@@ -1237,10 +1367,17 @@ void Op::genCode(stack<Register*> &regStack){
 
 void UnOp::genCode(stack<Register*> &regStack){
   if (op == UnOpType::NOT){
-    node1->fall = !fall;
-    node1->genCode(regStack);
-    trueList = node1->falseList;
-    falseList = node1->trueList;
+    if (arith){
+      node1->fall = 0;
+      node1->genCode(regStack);
+    }
+    else{
+      node1->setArith();
+      node1->fall = !fall;
+      node1->genCode(regStack);
+      trueList = node1->falseList;
+      falseList = node1->trueList;
+    }
   }
   else if (op == UnOpType::UMINUS || op == UnOpType::PP){
     if (astnode_type->basetype == Type::Int){
@@ -1641,6 +1778,45 @@ void ToInt::genCode(stack<Register*> &regStack){
 }
 
 
+/* Helper function to create the goto instr related stuff */
+
+void genCodeHelper(CList* list, int fall, int arith, string regName, string opr){
+  if (fall){
+    if (arith){ 
+      codeStack.push_back(new Instr("move", "0", regName));
+      GotoInstr *code = new GotoInstr(fallInstr(opr));
+      codeStack.push_back(code);
+      codeStack.push_back(new Instr("move", "1", regName));
+      list->add(code);
+      int nodeStart = nextInstr();
+      codeStack.push_back(new LCode());
+      list->backpatch(getInstr(nodeStart));
+    }
+    else {
+      GotoInstr *code = new GotoInstr(fallInstr(opr));
+      codeStack.push_back(code);
+      list->add(code);
+    }
+  }
+  else{
+    if (arith){ 
+      codeStack.push_back(new Instr("move", "1", regName));
+      GotoInstr *code = new GotoInstr(fallInstr(opr));
+      codeStack.push_back(code);
+      codeStack.push_back(new Instr("move", "0", regName));
+      list->add(code);
+      int nodeStart = nextInstr();
+      codeStack.push_back(new LCode());
+      list->backpatch(getInstr(nodeStart));
+    }
+    else{
+      GotoInstr *code = new GotoInstr(notFallInstr(opr));
+      codeStack.push_back(code);
+      list->add(code);
+    }
+  }
+}
+
 /* This is a template class based function 
    supporting correctness for Int, Float
    for operators - Plus, Minus, Div, mult 
@@ -1653,6 +1829,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
   int lr = node1->getrType();
   int rr = node2->getrType();
   if (opr == "Plus" || opr == "Minus" || opr == "Div" || opr == "Mult" || opr == "LT" || opr == "GT" || opr == "LE_OP" || opr == "GE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
+    // The children need to be arithmetic operations for these operators
     if (lr > 1 || rr > 1){
 
       // Case when one of subexpression is constant
@@ -1664,39 +1841,35 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
       
 	if (opr == "Plus"){
 	  codeStack.push_back(new Instr("move", toString(rval), regName));
-	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
 	  codeStack.push_back(new Instr("add" + type, toString(lval), regName));
 	}
 	else if (opr == "Minus"){
 	  rval = -1;                                               // RHS = -RHS
 	  codeStack.push_back(new Instr("move", toString(lval), regName));
-	  //	  cout<<"move("<<lval<<","<<regName<<")"<<endl;
 	  codeStack.push_back(new Instr("add" + type, toString(rval), regName));
 	}
 	else if (opr == "Mult"){
 	  codeStack.push_back(new Instr("move", toString(rval), regName));
-	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
 	  codeStack.push_back(new Instr("mul" + type, toString(lval), regName));
 	}
 	else if (opr == "Div"){
 	  codeStack.push_back(new Instr(toString(rval), regName));
-	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
 	  codeStack.push_back(new Instr("div" + type, toString(lval), regName));
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
 	  codeStack.push_back(new Instr("move", toString(rval), regName));
-	  //	  cout<<"move("<<rval<<","<<regName<<")"<<endl;
 	  codeStack.push_back(new Instr("cmp" + type, toString(lval), regName));
-	  //	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	  if (fall){
-	    GotoInstr *code = new GotoInstr(fallInstr(opr));
-	    codeStack.push_back(code);
-	    falseList->add(code);
+	    genCodeHelper(falseList, fall, arith, regName, opr);
+	    // GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    // codeStack.push_back(code);
+	    // falseList->add(code);
 	  }
 	  else{
-	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
-	    codeStack.push_back(code);
-	    trueList->add(code);
+	    genCodeHelper(trueList, fall, arith, regName, opr);
+	    // GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    // codeStack.push_back(code);
+	    // trueList->add(code);
 	  }
 	}
 	else {
@@ -1729,14 +1902,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, toString(lval), regName));
 	  //	  cout<<"cmp"<<type<<"("<<lval<<","<<regName<<")"<<endl;
 	  if (fall){
-	    GotoInstr *code = new GotoInstr(fallInstr(opr));
-	    codeStack.push_back(code);
-	    falseList->add(code);
+	    genCodeHelper(falseList, fall, arith, regName, opr);
+	    // GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    // codeStack.push_back(code);
+	    // falseList->add(code);
 	  }
 	  else{
-	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
-	    codeStack.push_back(code);
-	    trueList->add(code);
+	    genCodeHelper(trueList, fall, arith, regName, opr);
+	    // GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    // codeStack.push_back(code);
+	    // trueList->add(code);
 	  }
 	}
 	else {
@@ -1782,14 +1957,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, regName, regName2));
 	  //	  cout<<"cmp"<<type<<"("<<regName<<","<<regName2<<")"<<endl;
 	  if (fall){
-	    GotoInstr *code = new GotoInstr(fallInstr(opr));
-	    codeStack.push_back(code);
-	    falseList->add(code);
+	    genCodeHelper(falseList, fall, arith, regName, opr);
+	    // GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    // codeStack.push_back(code);
+	    // falseList->add(code);
 	  }
 	  else{
-	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
-	    codeStack.push_back(code);
-	    trueList->add(code);
+	    genCodeHelper(trueList, fall, arith, regName, opr);
+	    // GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    // codeStack.push_back(code);
+	    // trueList->add(code);
 	  }
 	  regStack.push(top);                                          // restore the pop
 	}
@@ -1838,14 +2015,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
 	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
-	    GotoInstr *code = new GotoInstr(fallInstr(opr));
-	    codeStack.push_back(code);
-	    falseList->add(code);
+	    genCodeHelper(falseList, fall, arith, regName1, opr);
+	    // GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    // codeStack.push_back(code);
+	    // falseList->add(code);
 	  }
 	  else{
-	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
-	    codeStack.push_back(code);
-	    trueList->add(code);
+	    genCodeHelper(trueList, fall, arith, regName1, opr);
+	    // GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    // codeStack.push_back(code);
+	    // trueList->add(code);
 	  }
 	}
 	else {
@@ -1897,14 +2076,16 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
 	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
-	    GotoInstr *code = new GotoInstr(fallInstr(opr));
-	    codeStack.push_back(code);
-	    falseList->add(code);
+	    genCodeHelper(falseList, fall, arith, regName1, opr);
+	    // GotoInstr *code = new GotoInstr(fallInstr(opr));
+	    // codeStack.push_back(code);
+	    // falseList->add(code);
 	  }
 	  else{
-	    GotoInstr *code = new GotoInstr(notFallInstr(opr));
-	    codeStack.push_back(code);
-	    trueList->add(code);
+	    genCodeHelper(trueList, fall, arith, regName1, opr);
+	    // GotoInstr *code = new GotoInstr(notFallInstr(opr));
+	    // codeStack.push_back(code);
+	    // trueList->add(code);
 	  }
 	}
 	else {
@@ -1919,6 +2100,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
   }
   /*----------------------------------------------Assign_Exp---------------------------------------------------*/
   else if (opr == "Assign_exp"){
+
     if (lr == 1){
       /* The case when identifier on LHS */
       if (rr == 2){
