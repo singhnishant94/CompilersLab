@@ -6,7 +6,7 @@ C-integer-constant		([1-9][0-9]*)|(0[bB][01]*)|(0[0-7]*)|(0[xX][0-9a-fA-F]*)
 exponent-part		([eE][+-][0-9]*)|([eE][0-9]*)		
 integer-part		[0-9]+
 fractional-part		[0-9]+		
-floating-point-constant		(\+|\-)?(({integer-part}\.{fractional-part})|([0-9]+\.)|(\.[0-9]+))({exponent-part}?)
+floating-point-constant		(({integer-part}\.{fractional-part})|([0-9]+\.)|(\.[0-9]+))({exponent-part}?)
 C-constant		{C-integer-constant}|{floating-point-constant}
 
 //identifier

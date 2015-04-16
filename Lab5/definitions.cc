@@ -59,12 +59,27 @@ string notFallInstr(string op){
 
 
 /* Function to convert to string from basic types */
-template<class T>
-string toString(T arg){
+string toString(int arg){
   stringstream ss;
   ss << arg;
   string s = ss.str();
   return s;
+}
+
+string toString(float arg){
+   char output[50];
+   snprintf(output,50,"%f",arg);
+   return (string)output;
+}
+
+string toString(double arg){
+   char output[50];
+   snprintf(output,50,"%f",arg);
+   return (string)output;
+}
+
+string toString(string s){
+    return s;
 }
 
 //global array of code
@@ -1041,7 +1056,7 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
   if (!isMain){
     codeStack.push_back(new Instr("loadi", "ind(esp)", "ebp"));  // storing dymanic link
     codeStack.push_back(new Instr("popi", "1"));  // pop stack
-  }
+    }
   codeStack.push_back(new Instr("return"));
   (node1->nextList)->backpatch(getInstr(nodeStart));
   codeStack.push_back(new HCode("}"));
@@ -1233,11 +1248,12 @@ void For::genCode(stack<Register*> &regStack){
 
 void Return::genCode(stack<Register*> &regStack){
   // put the return value from exp onto top stack
-  if (astnode_type->basetype == Type::Int){
+    Type* t = node1->getType();
+  if (t->basetype == Type::Int){
     int d1; IntConst d2(1); 
     genCode(d1, d2, regStack, "i");
   }
-  else if (astnode_type->basetype == Type::Float){
+  else if (t->basetype == Type::Float){
     float d1; FloatConst d2(1); 
     genCode(d1, d2, regStack, "f");
   }
@@ -1248,7 +1264,7 @@ void Return::genCode(stack<Register*> &regStack){
 
 template<class T, class R>
 void Return::genCode(T d1, R d2, stack<Register*> & regStack, string type){
-  if (isType(node1, &d2)){
+    if (isType(node1, &d2)){
     // constant case
     T val = ((R*)node1)->getValue();
     codeStack.push_back(new Instr("store" + type, toString(val), "ind(ebp, "  + toString(retOffset) + ")"));
@@ -1814,7 +1830,7 @@ void ToFloat::genCode(stack<Register*> &regStack){
   node1->genCode(regStack);   // constant loads itself on top Reg
   Register* top = regStack.top();
   string regName = top->getName();
-  codeStack.push_back(new Instr("intToFloat", regName));
+  codeStack.push_back(new Instr("intTofloat", regName));
   //  cout<<"intTofloat("<<regName<<")"<<endl;
 }
 
@@ -1823,7 +1839,7 @@ void ToInt::genCode(stack<Register*> &regStack){
   node1->genCode(regStack);   // constant loads itself on top Reg
   Register* top = regStack.top();
   string regName = top->getName();
-  codeStack.push_back(new Instr("floatToInt", regName));
+  codeStack.push_back(new Instr("floatToint", regName));
   //  cout<<"floatToint("<<regName<<")"<<endl;
 }
 
