@@ -1992,7 +1992,6 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  Register* top2 = regStack.top();
 	  string regName2 = top2->getName();
 	  codeStack.push_back(new Instr("move", toString(rval), regName2));
-	  //	  cout<<"move("<<rval<<", "<<regName2<<")"<<endl;              // Load RHS into reg
 	  codeStack.push_back(new Instr("div" + type, regName, regName2));
 	  regStack.push(top);                                          // restore the pop
 	  swapTopReg(regStack);
@@ -2058,12 +2057,10 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("mul" + type, regName2, regName1));
 	}
 	else if (opr == "Div"){
-	  codeStack.push_back(new Instr("div" + type, regName1, regName2));
-	  
+	  codeStack.push_back(new Instr("div" + type, regName1, regName2));	  
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
 	  codeStack.push_back(new Instr("cmp" + type, regName1, regName2));
-	  //	  cout<<"cmp"<<type<<"("<<regName1<<","<<regName2<<")"<<endl;
 	  if (fall){
 	    genCodeHelper(falseList, fall, arith, regName1, opr);
 	    // GotoInstr *code = new GotoInstr(fallInstr(opr));
@@ -2083,7 +2080,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 
 	regStack.push(top2);
 	popUsedReg();
-	if (opr != "div")
+	if (opr != "Div")
 	  swapTopReg(regStack); // top1 contanis the evaulated expression
       }
       else {
@@ -2094,18 +2091,18 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	Register* top1 = regStack.top();
 	string regName1 = top1->getName();
 	codeStack.push_back(new Instr("push" + type, regName1));
-	//	cout<<"push"<<type<<"("<<regName1<<")"<<endl;   // store the value
-	node1->genCode(regStack);
-	  
+
+	node1->genCode(regStack);	  
+
 	swapTopReg(regStack);
+
 	Register* top2 = regStack.top();
 	string regName2 = top2->getName();
-	// To load the esp into regName2
 	codeStack.push_back(new Instr("load" + type, "ind(esp)", regName2));
-	//	cout<<"load"<<type<<"(ind(esp), "<<regName2<<")"<<endl;
-	codeStack.push_back(new Instr("pop", "1"));
-	//	cout<<"pop"<<type<<"(1)"<<endl;
+	codeStack.push_back(new Instr("pop" + type, "1"));
+
 	regStack.pop();
+
 	top1 = regStack.top();
 	regName1 = top1->getName();
 
@@ -2143,7 +2140,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	}
 
 	regStack.push(top2);   // store the reg back
-	if (opr == "div")
+	if (opr != "Div")
 	  swapTopReg(regStack);   // restore regName1 to top
       }
     }

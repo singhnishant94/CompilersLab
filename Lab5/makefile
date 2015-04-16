@@ -1,7 +1,11 @@
 all: clean lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Parserbase.h Parser.ih
 #	./sedscript
 	g++   --std=c++0x lex.cc parse.cc main.cc;
-	./a.out < ./test-cpp > junk.scm;
+	./a.out < ./test-cpp > ./code.asm;
+	cp ./code.asm ./Machine/code.asm;
+	cd Machine && \
+	make && \
+	cp ./a.out ../exe
 #	egrep 'nextToken|reduce' junk;
 #	dot -Tps graph.gv -o graph.ps;
 #	gnome-open graph.ps
