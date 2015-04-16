@@ -1002,21 +1002,24 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
   vector<pair<int, int> > trr;
   trr.push_back(pair<int, int>(0, 0));
   // 1 - int, 2 - float
+  int countFloat = 0, countInt = 0;  // keeps count of int, float
   for(;itr != mp.end(); itr++){
     GlType* temp = itr->second;
     if (temp->type == VarType::BASIC){
       string fun = "push";
       if (((BasicType*)temp)->typeName == BasicVarType::INT){
+	countInt++;
 	fun += "i";
 	if (trr[trr.size() - 1].first == 1) trr[trr.size() - 1].second++;
 	else trr.push_back(pair<int, int>(1, 1));
       }
       else if (((BasicType*)temp)->typeName == BasicVarType::FLOAT){
+	countFloat++;
 	fun += "f";
 	if (trr[trr.size() - 1].first == 2) trr[trr.size() - 1].second++;
 	else trr.push_back(pair<int, int>(2, 1));
       }
-      codeStack.push_back(new Instr(fun, "0"));
+      //codeStack.push_back(new Instr(fun, "0"));
     }
     else {
       BasicVarType t = ((ArrayType*)temp)->getBasicVarType();
@@ -1034,14 +1037,19 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
       }
       
       for(int i = 0; i < l; i++){
-	codeStack.push_back(new Instr(fun, "0"));
+	//	codeStack.push_back(new Instr(fun, "0"));
+	if (t == BasicVarType::INT) countInt++;
+	else if (t == BasicVarType::FLOAT) countFloat++;
       }
     }
   }
   
+  int intSize = 4, floatSize = 4;
+  codeStack.push_back(new Instr("addi", toString(-1*(intSize*countInt + floatSize*countFloat)), "esp"));
+  
   node1->genCode(regStack);
   int nodeStart = nextInstr();
-  
+  /*
   int l1 = trr.size();
   for(int i = l1 - 1; i > 0; i--){
     if (trr[i].first == 1){
@@ -1050,7 +1058,9 @@ void FuncDef :: genCode(stack<Register*> &regStack, SymTab* symTab){
     else {
       codeStack.push_back(new Instr("popf", toString(trr[i].second)));
     }
-  }
+    }*/
+
+  codeStack.push_back(new Instr("addi", toString((intSize*countInt + floatSize*countFloat)), "esp"));
   
   
   if (!isMain){
