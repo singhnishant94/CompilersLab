@@ -1459,49 +1459,22 @@ void UnOp::genCode(T d1, R d2, stack<Register*> &regStack, string type){
 	VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
 	int offset = rec->offset;
 	codeStack.push_back(new Instr("store" + type, regName, "ind(ebp, " + toString(offset) + ")"));
+	codeStack.push_back(new Instr("add" + type, "-1", regName));
       }
       else {
 	/* case when array on LHS */
-	node1->genCode(regStack);
+	((Index*)node1)->genCodeLExp(regStack);
 	Register *reg1 = regStack.top();
-	string regName1 = reg1->getName();
-	codeStack.push_back(new Instr("add" + type, "1", regName1));      
-	if (regCount == 2){
-	  /* Need to store the result calculated in this case */
-	  codeStack.push_back(new Instr("push" + type, regName1));
-	  //cout<<"push"<<type<<"("<<regName1<<")"<<endl;
-	  swapTopReg(regStack);             // SWAP
-	  ((Index*)node1)->genCodeLExp(regStack);
-	  swapTopReg(regStack);             // SWAP
-	  reg1 = regStack.top();
-	  regName1 = reg1->getName();
-	  regStack.pop();                 // POP
-	  codeStack.push_back(new Instr("load" + type, "ind(esp) ", regName1));
-	  codeStack.push_back(new Instr("pop" + type, "1"));
-	  
-	  Register* reg2 = regStack.top();
-	  string regName2 = reg2->getName();
-	  
-	  // reg2 has the addr, reg1 has the value
-	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
-	  regStack.push(reg1);              // PUSH
-	}
-	else {
-	  /* Store not needed as sufficent registers */
-	  regStack.pop();                 // POP
-	  
-	  if (type == "i") pushUsedReg(reg1, 1);   // saving the register with type of data
-	  else pushUsedReg(reg1, 2);
-	  
-	  ((Index*)node1)->genCodeLExp(regStack);
-	  Register* reg2 = regStack.top();
-	  string regName2 = reg2->getName();
-	  
-	  // reg2 has the addr, reg1 has the value
-	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
-	  regStack.push(reg1);            // PUSH
-	  popUsedReg();  // poping the saved register
-	}
+	string regName1 = reg1->getName();  // regName contains the pointer to array position
+	regStack.pop();
+	Register* reg2 = regStack.top();
+	string regName2 = reg2->getName();       
+	codeStack.push_back(new Instr("load"+type, "ind("+regName1+")", regName2));  // regName2 contains the value
+	codeStack.push_back(new Instr("add"+type, "1", regName2));                   // val + 1 in regName2
+	codeStack.push_back(new Instr("store"+type, regName2, "ind("+regName1+")"));  // regName2 stored in regName1 location
+	codeStack.push_back(new Instr("add"+type, "-1", regName2));                   // val in regName2
+	regStack.push(reg1);
+	swapTopReg(regStack);
       }
     }
     
@@ -2184,9 +2157,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	Register* reg = regStack.top();
 	string regName = reg->getName();
 	codeStack.push_back(new Instr("move", toString(val), regName));
-	//	cout<<"move"<<"("<<val<<", "<<regName<<")"<<endl;   // top reg contains the value
 	codeStack.push_back(new Instr("store" + type, toString(val), "ind(ebp, " + toString(offset) + ")"));
-	//	cout<<"store"<<type<<"("<<val<<", ind(ebp, "<<offset<<"))"<<endl;
       }
       else {
 	/* RHS is exp, calculated in Reg */
@@ -2196,7 +2167,6 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	VarRecord* rec = (VarRecord*)((Identifier*)node1)->getRecord();
 	int offset = rec->offset;
 	codeStack.push_back(new Instr("store" + type, regName, "ind(ebp, " + toString(offset) + ")"));
-	//	cout<<"store"<<type<<"("<<regName<<", ind(ebp, "<<offset<<"))"<<endl;
       }
     }
     else {
@@ -2209,9 +2179,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	Register* reg = regStack.top(); // reg contains the address which would be dereferenced
 	string regName = reg->getName();
 	codeStack.push_back(new Instr("store" + type, toString(val), "ind(" + regName + ")"));
-	//	cout<<"store"<<type<<"("<<val<<", ind("<<regName<<"))"<<endl;
 	codeStack.push_back(new Instr("move", toString(val), regName));
-	//	cout<<"move("<<val<<", "<<regName<<")"<<endl;
       }
       else {
 	/* RHS is exp, calculated in Reg */
@@ -2222,7 +2190,6 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	if (countReg == 2){
 	  /* Need to store the result calculated in this case */
 	  codeStack.push_back(new Instr("push" + type, regName1));
-	  //	  cout<<"push"<<type<<"("<<regName1<<")"<<endl;
 	  swapTopReg(regStack);             // SWAP
 	  ((Index*)node1)->genCodeLExp(regStack);
 	  swapTopReg(regStack);             // SWAP
@@ -2230,16 +2197,12 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  regName1 = reg1->getName();
 	  regStack.pop();                 // POP
 	  codeStack.push_back(new Instr("load" + type, "ind(esp)", regName1));
-	  //	  cout<<"load"<<type<<"(ind(esp), "<<regName1<<")"<<endl;
 	  codeStack.push_back(new Instr("pop", "1"));
-	  //	  cout<<"pop"<<type<<"(1)"<<endl;
 
 	  Register* reg2 = regStack.top();
 	  string regName2 = reg2->getName();
 	
-	  // reg2 has the addr, reg1 has the value
 	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
-	  //	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
 	  regStack.push(reg1);              // PUSH
 	}
 	else {
@@ -2253,9 +2216,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  Register* reg2 = regStack.top();
 	  string regName2 = reg2->getName();
 	
-	  // reg2 has the addr, reg1 has the value
-	  codeStack.push_back(new Instr("store" + type, regName2, "ind(" + regName2 + ")"));
-	  //	  cout<<"store"<<type<<"("<<regName1<<", ind("<<regName2<<"))"<<endl;
+	  codeStack.push_back(new Instr("store" + type, regName1, "ind(" + regName2 + ")"));
 	  regStack.push(reg1);            // PUSH
 	  popUsedReg();
 	}
