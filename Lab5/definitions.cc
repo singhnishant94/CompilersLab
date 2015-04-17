@@ -114,7 +114,7 @@ Code* getInstr(int index){
 
 template<class T>
 int isLexp(T* obj){
-  if (dynamic_cast<const Identifier*>(obj) || dynamic_cast<const Identifier*>(obj)) return 1;
+  if (dynamic_cast<const Identifier*>(obj) || dynamic_cast<const Index*>(obj)) return 1;
   else return 0;
 }
 
