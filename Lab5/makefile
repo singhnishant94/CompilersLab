@@ -2,6 +2,8 @@ all: clean lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h P
 #	./sedscript
 	g++   --std=c++0x lex.cc parse.cc main.cc;
 	./a.out < ./test-cpp > ./code.asm;
+
+exe: code.asm
 	cp ./code.asm ./Machine/code.asm;
 	cd Machine && \
 	make && \
