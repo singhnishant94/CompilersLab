@@ -1902,7 +1902,7 @@ void Op::genCodeTemplate(T d1, Rtype d2, string type, stack<Register*> &regStack
 	  codeStack.push_back(new Instr("mul" + type, toString(lval), regName));
 	}
 	else if (opr == "Div"){
-	  codeStack.push_back(new Instr(toString(rval), regName));
+	  codeStack.push_back(new Instr("move", toString(rval), regName));
 	  codeStack.push_back(new Instr("div" + type, toString(lval), regName));
 	}
 	else if (opr == "LT" || opr == "GT" || opr =="GE_OP" || opr == "LE_OP" || opr == "EQ_OP" || opr == "NE_OP"){
